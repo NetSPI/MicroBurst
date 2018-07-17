@@ -5,19 +5,19 @@ A collection of scripts for assessing Microsoft Azure security
 PS C:\> Get-Help Invoke-EnumerateAzureBlobs
 
 NAME
-    Invoke-EnumerateAzureBlobs
+Invoke-EnumerateAzureBlobs
     
 SYNOPSIS
-    PowerShell function for enumerating public Azure Blobs and Containers.
+PowerShell function for enumerating public Azure Blobs and Containers.
         
 SYNTAX
-    Invoke-EnumerateAzureBlobs [[-Base] <String>] [[-OutputFile] <String>] [[-Permutations] <String>] [[-Folders] <String>] [[-BingAPIKey] <String>] [<CommonParameters>]
+Invoke-EnumerateAzureBlobs [[-Base] <String>] [[-OutputFile] <String>] [[-Permutations] <String>] [[-Folders] <String>] [[-BingAPIKey] <String>] [<CommonParameters>]
         
 DESCRIPTION
-    The function will check for valid .blob.core.windows.net host names via DNS. 
-	If a BingAPIKey is supplied, a Bing search will be made for the base word under the .blob.core.windows.net site.
-    After completing storage account enumeration, the function then checks for valid containers via the Azure REST API methods.
-    If a valid container has public files, the function will list them out.
+The function will check for valid .blob.core.windows.net host names via DNS. 
+If a BingAPIKey is supplied, a Bing search will be made for the base word under the .blob.core.windows.net site.
+After completing storage account enumeration, the function then checks for valid containers via the Azure REST API methods.
+If a valid container has public files, the function will list them out.
 	
     -------------------------- EXAMPLE 1 --------------------------
     
@@ -40,5 +40,4 @@ DESCRIPTION
      Public File Available: https://hrsecure.blob.core.windows.net/NETSPItest/SuperSecretFile.txt
     Found Container - secureimages.blob.core.windows.net/NETSPItest123	
 	
-RELATED LINKS
-    https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
+RELATED LINKS - https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
