@@ -15,7 +15,8 @@ Function Invoke-EnumerateAzureBlobs
             PowerShell function for enumerating public Azure Blobs and Containers.
             .DESCRIPTION
             The function will check for valid .blob.core.windows.net host names via DNS. 
-            After completing DNS enumeration, the function then checks for valid containers via the Azure REST API methods. Additional storage account and container enumeration can be completed using the Bing Search APIs.
+	        If a BingAPIKey is supplied, a Bing search will be made for the base word under the .blob.core.windows.net site.
+            After completing storage account enumeration, the function then checks for valid containers via the Azure REST API methods.
             If a valid container has public files, the function will list them out.
             .PARAMETER Base
             The Base name to prepend/append with permutations.
@@ -46,6 +47,8 @@ Function Invoke-EnumerateAzureBlobs
 	            Public File Available: https://hrsecure.blob.core.windows.net/NETSPItest/SuperSecretFile.txt
             Found Container - secureimages.blob.core.windows.net/NETSPItest123
 
+            .LINK
+            https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
     #>
 
     [CmdletBinding()]
@@ -133,6 +136,7 @@ $lookupResult = ""
     
     # Bing Dorking Section here
     if($BingAPIKey){
+
         # Set up Search        
         $BingQuery = "site:blob.core.windows.net "+$Base
 
