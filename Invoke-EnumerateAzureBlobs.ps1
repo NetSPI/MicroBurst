@@ -60,11 +60,11 @@ Function Invoke-EnumerateAzureBlobs
 
         [Parameter(Mandatory=$false,
         HelpMessage="Specific permutations file to use.")]
-        [string]$Permutations = "permuations.txt",
+        [string]$Permutations = "permutations.txt",
 
         [Parameter(Mandatory=$false,
         HelpMessage="Specific folders file to use.")]
-        [string]$Folders = "permuations.txt",
+        [string]$Folders = "permutations.txt",
 
         [Parameter(Mandatory=$false,
         HelpMessage="Bing API Key to use")]
