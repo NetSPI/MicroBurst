@@ -6,6 +6,29 @@
 
 #>
 
+Function Resolve-DnsNameCustom
+{
+    <#
+        The Resolve-DnsName cmdlet is available since Windows 8.1 and Server 2012, but is missing on Windows 7.
+        In this case, this function fallbacks on [Net.DNS]::GetHostEntry()
+    #>
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$Name = ""
+    )
+
+    $lookupResult = ""
+    try{
+        ($lookupResult = Resolve-DnsName $lookup -ErrorAction Stop -Verbose:$false | Select-Object -Property Name -First 1)|Out-Null
+    }
+    catch [System.Management.Automation.CommandNotFoundException]{
+        # Resolve-DnsName cmdlet is not available on Windows 7
+        try{($lookupResult = [Net.DNS]::GetHostEntry($lookup) | Select-Object -Property HostName -First 1)|Out-Null}catch{}
+    }
+    catch{} # all other cases
+
+    return $lookupResult
+}
 
 Function Invoke-EnumerateAzureBlobs
 {
@@ -82,7 +105,7 @@ $lookupResult = ""
         # Check for the base word
         $lookup = ($Base+$domain).ToLower()
         Write-Verbose "Resolving - $lookup"
-        try{($lookupResult = Resolve-DnsName $lookup -ErrorAction Stop -Verbose:$false | select Name | Select-Object -First 1)|Out-Null}catch{}
+        $lookupResult = Resolve-DnsNameCustom $lookup
         if ($lookupResult -ne ""){Write-Host "Found Storage Account -  $lookup"; $runningList += $lookup; if ($OutputFile){$lookup >> $OutputFile}}
         $lookupResult = ""
     }
@@ -104,14 +127,14 @@ $lookupResult = ""
             # PermutationBase
             $lookup = ($word+$Base+$domain).ToLower()
             Write-Verbose "Resolving - $lookup"
-            try{($lookupResult = Resolve-DnsName $lookup -ErrorAction Stop -Verbose:$false | select Name | Select-Object -First 1)|Out-Null}catch{}
+            $lookupResult = Resolve-DnsNameCustom $lookup
             if ($lookupResult -ne ""){Write-Host "Found Storage Account -  $lookup"; $runningList += $lookup; if ($OutputFile){$lookup >> $OutputFile}}
             $lookupResult = ""
 
             # BasePermutation
             $lookup = ($Base+$word+$domain).ToLower()
             Write-Verbose "Resolving - $lookup"
-            try{($lookupResult = Resolve-DnsName $lookup -ErrorAction Stop -Verbose:$false | select Name | Select-Object -First 1)|Out-Null}catch{}
+            $lookupResult = Resolve-DnsNameCustom $lookup
             if ($lookupResult -ne ""){Write-Host "Found Storage Account -  $lookup"; $runningList += $lookup; if ($OutputFile){$lookup >> $OutputFile}}
             $lookupResult = ""
         }
@@ -119,7 +142,7 @@ $lookupResult = ""
             # Check the permutation word if there's no base
             $lookup = ($word+$domain).ToLower()
             Write-Verbose "Resolving - $lookup"
-            try{($lookupResult = Resolve-DnsName $lookup -ErrorAction Stop -Verbose:$false | select Name | Select-Object -First 1)|Out-Null}catch{}
+            $lookupResult = Resolve-DnsNameCustom $lookup
             if ($lookupResult -ne ""){Write-Host "Found Storage Account -  $lookup"; $runningList += $lookup; if ($OutputFile){$lookup >> $OutputFile}}
             $lookupResult = ""
         }
