@@ -1,6 +1,14 @@
 # MicroBurst
 A collection of scripts for assessing Microsoft Azure security
 
+# Import the module
+Before to use the module, import it using the following command:
+
+```
+cd <REPO_CLONE_HOME>
+Import-module .\Invoke-EnumerateAzureBlobs.ps1 -Force
+```
+
 # Invoke-EnumerateAzureBlobs.ps1
 PS C:\> Get-Help Invoke-EnumerateAzureBlobs
 
