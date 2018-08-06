@@ -2,6 +2,8 @@
 A collection of scripts for assessing Microsoft Azure security
 
 # Invoke-EnumerateAzureBlobs.ps1
+PS C:\> Import-Module .\Invoke-EnumerateAzureBlobs.ps1
+
 PS C:\> Get-Help Invoke-EnumerateAzureBlobs
 
 NAME: Invoke-EnumerateAzureBlobs
