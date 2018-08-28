@@ -2,7 +2,7 @@
 A collection of scripts for assessing Microsoft Azure security
 
 # Get-AzurePasswords.ps1
-PS C:\> Get-Help Invoke-EnumerateAzureBlobs
+PS C:\> Get-Help Get-AzurePasswords
 
 NAME: Get-AzurePasswords
     
