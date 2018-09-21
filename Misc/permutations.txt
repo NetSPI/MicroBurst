@@ -37,6 +37,7 @@ jenkins
 key
 keys
 logs
+my
 photos
 private
 processed

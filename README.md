@@ -1,6 +1,32 @@
-# MicroBurst
-A collection of scripts for assessing Microsoft Azure security
+![MicroBurstLogo](https://github.com/NetSPI/MicroBurst/blob/master/Images/Microburst.png) 
+<br> 
+[![licence badge]][licence] 
+[![stars badge]][stars] 
+[![forks badge]][forks] 
+[![issues badge]][issues] |
 
+[licence badge]:https://img.shields.io/badge/license-New%20BSD-blue.svg
+[stars badge]:https://img.shields.io/github/stars/NetSPI/MicroBurst.svg
+[forks badge]:https://img.shields.io/github/forks/NetSPI/MicroBurst.svg
+[issues badge]:https://img.shields.io/github/issues/NetSPI/MicroBurst.svg
+
+[licence]:https://github.com/NetSPI/MicroBurst/blob/master/LICENSE
+[stars]:https://github.com/NetSPI/MicroBurst/stargazers
+[forks]:https://github.com/NetSPI/MicroBurst/network
+[issues]:https://github.com/NetSPI/MicroBurst/issues
+
+
+### MicroBurst: A PowerShell Toolkit for Attacking Azure
+
+MicroBurst includes functions and scripts that support Azure Services discovery, weak configuration auditing, and post exploitation actions such as credential dumping. It is intended to be used during penetration tests where Azure is in use.
+
+### Author, Contributors, and License
+* Author: Karl Fosaaen (@_nullbind), NetSPI - 2018
+* Contributors: Scott Sutherland (@_nullbind), Thomas Elling (@thomaselling)
+* License: BSD 3-Clause
+* Required Dependencies: Azure, AzureRM, and MSOnline PowerShell Modules
+
+### Function Information
 # Get-AzurePasswords.ps1
 PS C:\> Get-Help Invoke-EnumerateAzureBlobs
 
