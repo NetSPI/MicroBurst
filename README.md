@@ -10,7 +10,7 @@
 [forks badge]:https://img.shields.io/github/forks/NetSPI/MicroBurst.svg
 [issues badge]:https://img.shields.io/github/issues/NetSPI/MicroBurst.svg
 
-[licence]:https://github.com/NetSPI/MicroBurst/blob/master/LICENSE
+[licence]:https://github.com/NetSPI/MicroBurst/blob/master/LICENSE.txt
 [stars]:https://github.com/NetSPI/MicroBurst/stargazers
 [forks]:https://github.com/NetSPI/MicroBurst/network
 [issues]:https://github.com/NetSPI/MicroBurst/issues
