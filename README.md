@@ -21,7 +21,7 @@
 MicroBurst includes functions and scripts that support Azure Services discovery, weak configuration auditing, and post exploitation actions such as credential dumping. It is intended to be used during penetration tests where Azure is in use.
 
 ### Author, Contributors, and License
-* Author: Karl Fosaaen (@_nullbind), NetSPI - 2018
+* Author: Karl Fosaaen (@kfosaaen), NetSPI - 2018
 * Contributors: Scott Sutherland (@_nullbind), Thomas Elling (@thomaselling)
 * License: BSD 3-Clause
 * Required Dependencies: Azure, AzureRM, and MSOnline PowerShell Modules
