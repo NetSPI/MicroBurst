@@ -28,7 +28,7 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 
 ### Function Information
 # Get-AzurePasswords.ps1
-PS C:\> Get-Help Invoke-EnumerateAzureBlobs
+PS C:\> Get-Help Get-AzurePasswords
 
 NAME: Get-AzurePasswords
     
