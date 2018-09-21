@@ -26,7 +26,10 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 * License: BSD 3-Clause
 * Required Dependencies: Azure, AzureRM, and MSOnline PowerShell Modules
 
-### Function Information
+### Importing the Module
+	Import-Module .\MicroBurst.psm1
+
+### Functions Information
 # Get-AzurePasswords.ps1
 PS C:\> Get-Help Get-AzurePasswords
 
