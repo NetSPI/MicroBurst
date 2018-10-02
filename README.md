@@ -110,3 +110,56 @@ DESCRIPTION:
     Found Container - secureimages.blob.core.windows.net/NETSPItest123	
 	
 RELATED LINKS: https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
+
+
+# Invoke-EnumerateAzureSubDomains.ps1
+PS C:\> Import-Module .\Invoke-EnumerateAzureSubDomains.ps1
+
+PS C:\> Get-Help Invoke-EnumerateAzureSubDomains
+
+NAME: Invoke-EnumerateAzureSubDomains
+
+SYNOPSIS: PowerShell function for enumerating public Azure services.
+
+SYNTAX: Invoke-EnumerateAzureSubDomains [-Base] <String> [[-Permutations] <String>] [<CommonParameters>]
+
+DESCRIPTION: The function will check for valid Azure subdomains, based off of a base word, via DNS.
+
+    -------------------------- EXAMPLE 1 --------------------------
+    
+    PS C:\>Invoke-EnumerateAzureSubDomains -Base test123 -Verbose
+    
+    Invoke-EnumerateAzureSubDomains -Base test12345678 -Verbose 
+    VERBOSE: Found test12345678.cloudapp.net
+    VERBOSE: Found test12345678.scm.azurewebsites.net
+    VERBOSE: Found test12345678.onmicrosoft.com
+    VERBOSE: Found test12345678.database.windows.net
+    VERBOSE: Found test12345678.mail.protection.outlook.com
+    VERBOSE: Found test12345678.queue.core.windows.net
+    VERBOSE: Found test12345678.blob.core.windows.net
+    VERBOSE: Found test12345678.file.core.windows.net
+    VERBOSE: Found test12345678.vault.azure.net
+    VERBOSE: Found test12345678.table.core.windows.net
+    VERBOSE: Found test12345678.azurewebsites.net
+    VERBOSE: Found test12345678.documents.azure.com
+    VERBOSE: Found test12345678.azure-api.net
+    VERBOSE: Found test12345678.sharepoint.com
+    
+    Subdomain                                Service                
+    ---------                                -------                
+    test12345678.azure-api.net               API Services           
+    test12345678.cloudapp.net                App Services           
+    test12345678.scm.azurewebsites.net       App Services           
+    test12345678.azurewebsites.net           App Services           
+    test12345678.documents.azure.com         Databases-Cosmos DB    
+    test12345678.database.windows.net        Databases-MSSQL        
+    test12345678.mail.protection.outlook.com Email                  
+    test12345678.vault.azure.net             Key Vaults             
+    test12345678.onmicrosoft.com             Microsoft Hosted Domain
+    test12345678.sharepoint.com              SharePoint             
+    test12345678.queue.core.windows.net      Storage Accounts       
+    test12345678.blob.core.windows.net       Storage Accounts       
+    test12345678.file.core.windows.net       Storage Accounts       
+    test12345678.table.core.windows.net      Storage Accounts
+
+RELATED LINKS: https://blog.netspi.com/enumerating-azure-services/
