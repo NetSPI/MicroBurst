@@ -163,3 +163,98 @@ DESCRIPTION: The function will check for valid Azure subdomains, based off of a 
     test12345678.table.core.windows.net      Storage Accounts
 
 RELATED LINKS: https://blog.netspi.com/enumerating-azure-services/
+
+# Get-AzureDomainInfo.ps1
+PS C:\> Import-Module .\Get-AzureDomainInfo.ps1
+
+PS C:\> Get-Help Get-AzureDomainInfo
+
+NAME: Get-AzureDomainInfo
+
+SYNOPSIS: PowerShell function for dumping information from Azure subscriptions via authenticated ASM and ARM connections.
+
+SYNTAX: Get-AzureDomainInfo [[-folder] <String>] [[-Subscription] <String>] [[-ResourceGroup] <String>] [[-Users] <String>] [[-Groups] <String>] [[-StorageAccounts] <String>] [[-Resources] <String>] [[-VMs] <String>] [[-NetworkInfo] <String>] [[-RBAC] <String>] [[-LoginBypass] <String>] [<CommonParameters>]
+
+DESCRIPTION: The function will dump available information for an Azure domain out to CSV and txt files in the -folder parameter directory.
+
+    -------------------------- EXAMPLE 1 --------------------------
+    
+    PS C:\>Get-AzureDomainInfo -folder MicroBurst -Verbose
+    
+    VERBOSE: Currently logged in via AzureRM as ktest@fosaaen.com
+    VERBOSE: Dumping information for Selected Subscriptions...
+    VERBOSE: Dumping information for the 'MicroBurst Demo' Subscription...
+    VERBOSE: Getting Domain Users...
+    VERBOSE: 	70 Domain Users were found.
+    VERBOSE: Getting Domain Groups...
+    VERBOSE: 	15 Domain Groups were found.
+    VERBOSE: Getting Domain Users for each group...
+    VERBOSE: 	Domain Group Users were enumerated for 15 group(s).
+    VERBOSE: Getting Storage Accounts...
+    VERBOSE: 	Listing out blob files for the icrourstesourcesdiag storage account...
+    VERBOSE: 		Listing files for the bootdiagnostics-mbdemoser container
+    VERBOSE: 	No available File Service files for the icrourstesourcesdiag storage account...
+    VERBOSE: 	No available Data Tables for the icrourstesourcesdiag storage account...
+    VERBOSE: 	Listing out blob files for the microburst storage account...
+    VERBOSE: 		Listing files for the test container
+    VERBOSE: 	No available File Service files for the microburst storage account...
+    VERBOSE: 	No available Data Tables for the microburst storage account...
+    VERBOSE: 	2 storage accounts were found.
+    VERBOSE: 	2 Domain Authentication endpoints were enumerated.
+    VERBOSE: Getting Domain Service Principals...
+    VERBOSE: 	58 service principals were enumerated.
+    VERBOSE: Getting Azure Resource Groups...
+    VERBOSE: 	3 Resource Groups were enumerated.
+    VERBOSE: Getting Azure Resources...
+    VERBOSE: 	36 Resources were enumerated.
+    VERBOSE: Getting AzureSQL Resources...
+    VERBOSE: 	1 AzureSQL servers were enumerated.
+    VERBOSE: 	2 AzureSQL databases were enumerated.
+    VERBOSE: Getting Azure App Services...
+    VERBOSE: 	2 App Services enumerated.
+    VERBOSE: Getting Network Interfaces...
+    VERBOSE: 	4 Network Interfaces Enumerated...
+    VERBOSE: Getting Public IPs for each Network Interface...
+    VERBOSE: Getting Network Security Groups...
+    VERBOSE: 	3 Network Security Groups were enumerated.
+    VERBOSE: 	6 Network Security Group Firewall Rules were enumerated.
+    VERBOSE: 		3 Inbound 'Any Any' Network Security Group Firewall Rules were enumerated.
+    VERBOSE: Getting RBAC Users and Roles...
+    VERBOSE: 	2 Users with 'Owner' permissions were enumerated.
+    VERBOSE: 	92 roles were enumerated.
+    
+    VERBOSE: Done with all tasks for the 'MicroBurst Demo' Subscription.
+
+
+# Get-MSOLDomainInfo.ps1
+PS C:\> Import-Module .\Get-MSOLDomainInfo.ps1
+
+PS C:\> Get-Help Get-MSOLDomainInfo
+
+NAME: Get-MSOLDomainInfo
+
+SYNOPSIS: PowerShell function for dumping information from an Office365 domain via an authenticated MSOL connection.
+
+SYNTAX: Get-MSOLDomainInfo [[-folder] <String>] [[-Users] <String>] [[-Groups] <String>] [<CommonParameters>]
+
+DESCRIPTION: The function will dump available information for an Office365 domain out to CSV and txt files in the -folder parameter directory.
+    
+    -------------------------- EXAMPLE 1 --------------------------
+    
+    PS C:\>Get-AzureDomainInfo -folder Test -Verbose
+    
+    VERBOSE: Getting Domain Contact Info...
+    VERBOSE: Getting Domains...
+    VERBOSE: 4 Domains were found.
+    VERBOSE: Getting Domain Users...
+    VERBOSE: 200 Domain Users were found across 4 domains.
+    VERBOSE: Getting Domain Groups...
+    VERBOSE: 90 Domain Groups were found.
+    VERBOSE: Getting Domain Users for each group...
+    VERBOSE: Domain Group Users were enumerated for 90 groups.
+    VERBOSE: Getting Domain Devices...
+    VERBOSE: 22 devices were enumerated.
+    VERBOSE: Getting Domain Service Principals...
+    VERBOSE: 134 service principals were enumerated.
+    VERBOSE: All done.
+	
