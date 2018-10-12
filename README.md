@@ -29,6 +29,15 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 ### Importing the Module
 	Import-Module .\MicroBurst.psm1
 
+### Blogs / Presentations
+* Anonymously Enumerating Azure Services - https://blog.netspi.com/enumerating-azure-services/
+* Anonymously Enumerating Azure File Resources - https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
+* Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions - https://blog.netspi.com/get-azurepasswords/
+* Utilizing Azure Services for Red Team Engagements - https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/
+
+* Attacking Azure Environments with PowerShell - DerbyCon2018 - https://www.youtube.com/watch?v=IdORwgxDpkw
+** Slides - https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell
+	
 ### Functions Information
 # Get-AzurePasswords.ps1
 PS C:\> Get-Help Get-AzurePasswords
