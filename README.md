@@ -36,7 +36,7 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 * Utilizing Azure Services for Red Team Engagements - https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/
 
 * Attacking Azure Environments with PowerShell - DerbyCon2018 - https://www.youtube.com/watch?v=IdORwgxDpkw
-** Slides - https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell
+* DerbyCon2018 Slides - https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell
 	
 ### Functions Information
 # Get-AzurePasswords.ps1
