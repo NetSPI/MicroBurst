@@ -178,7 +178,6 @@ Function Get-AzurePasswords
             if ($configFile){
                 foreach ($profile in $configFile.publishData.publishProfile){
                     # Read Deployment Passwords and add to the output table
-
                     $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName,$profile.userName,$profile.userPWD,$profile.publishUrl,"N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
                     
                     # Parse Connection Strings                    
