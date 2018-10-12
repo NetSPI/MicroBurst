@@ -187,10 +187,12 @@ Function Get-AzurePasswords
                     if ($profile.mySQLDBConnectionString){
                         $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName+"-ConnectionString","N/A",$profile.mySQLDBConnectionString,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
                     }
-                    if ($profile.targetDatabaseEngineType){
-                        $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName+"-ConnectionString","N/A",$profile.targetDatabaseEngineType,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
-                    }
                 }
+                # Grab additional custom connection strings
+                $resourceName = $_.Name+"/connectionstrings"
+                $resource = Invoke-AzureRmResourceAction -ResourceGroupName $_.ResourceGroup -ResourceType Microsoft.Web/sites/config -ResourceName $resourceName -Action list -ApiVersion 2015-08-01 -Force
+                $propName = $resource.properties | gm -M NoteProperty | select name
+                if($resource.Properties.($propName.Name).type -eq 3){$TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+"-Custom-ConnectionString","N/A",$resource.Properties.($propName.Name).value,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null}
             }
             Write-Verbose "`tProfile available for $appServiceName"
         }
