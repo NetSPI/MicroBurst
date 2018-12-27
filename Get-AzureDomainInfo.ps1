@@ -5,6 +5,7 @@
 #>
 
 # To Do:
+#       Add Ctrl-C handling for skipping sections/storage accounts
 #       Higher level metrics reporting (X% of your domain users have contributor rights, etc.)
 #       Apply NSGs to Public IPs and VMs to pre-map existing internet facing services
 #       Add better error handling - More try/catch blocks for built-in functions that you may not have rights for
@@ -171,8 +172,13 @@ Function Get-AzureDomainInfo
     }
 
     # Folder Parameter Checking - Creates AzureRM folder to separate from MSOL folder
-    if ($folder){if(Test-Path $folder){if(Test-Path $folder"\AzureRM"){}else{New-Item -ItemType Directory $folder"\AzureRM"|Out-Null}}else{New-Item -ItemType Directory $folder|Out-Null ; New-Item -ItemType Directory $folder"\AzureRM"|Out-Null}; $folder = -join ($pwd, "\" ,$folder, "\AzureRM")}
+    if ($folder){
+        if(Test-Path $folder){
+            if(Test-Path $folder"\AzureRM"){}
+            else{New-Item -ItemType Directory $folder"\AzureRM"|Out-Null}}
+        else{New-Item -ItemType Directory $folder|Out-Null ; New-Item -ItemType Directory $folder"\AzureRM"|Out-Null}; $folder = -join ($folder, "\AzureRM")}
     else{if(Test-Path AzureRM){}else{New-Item -ItemType Directory AzureRM|Out-Null};$folder= -join ($pwd, "\AzureRM")}
+
 
     if(Test-Path $folder"\"$Subscription){}
     else{New-Item -ItemType Directory $folder"\"$Subscription | Out-Null}
@@ -275,7 +281,8 @@ Function Get-AzureDomainInfo
                             Write-Verbose "`t`t`tPublic File Found - $pubfileName"
 
                             $blobUrl = "https://$StorageAccountName.blob.core.windows.net/$containerName/"+$blobName.Name
-                            $blobUrl >> $folder"\Files\PublicFileURLs.txt"
+                            # Write out available files within "Blob" containers
+                            $blobUrl >> $folder"\Files\BlobFileURLs.txt"                            
                             }
                         if ($publicStatus.PublicAccess -eq "Container"){
                             Write-Verbose "`t`t`t$containerName Container is Public" 
@@ -283,6 +290,12 @@ Function Get-AzureDomainInfo
                             $blobName = Get-AzureStorageBlob -Container $container.Name | select Name
                             $blobUrl = "https://$StorageAccountName.blob.core.windows.net/$containerName/"
                             $blobUrl >> $folder"\Files\PublicContainers.txt"
+                            # Write out available files within "Container" containers
+                            foreach ($blobfile in $blobName){                                
+                                $blobUrl = "https://$StorageAccountName.blob.core.windows.net/$containerName/"+$blobfile.Name
+                                $blobUrl >> $folder"\Files\ContainersFileUrls.txt"
+                                }
+                            
                             }
                     }
 
@@ -408,6 +421,14 @@ Function Get-AzureDomainInfo
         
         Write-Verbose "`t$appServsCount App Services enumerated."
 
+        # Get list of Disks
+        Write-Verbose "Getting Azure Disks..."
+        $disks = Get-AzureRmDisk
+        $disksCount = $disks.Count
+        Write-Verbose "`t$disksCount Disks were enumerated."
+        # Write Disk info to file
+        $disks | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\Disks.CSV"
+        $disks | ForEach-Object{if($_.EncryptionSettings -eq $null){$_.Name | Out-File -LiteralPath $folder"\Resources\Disks-NoEncryption.txt"}}
     }
 
     if ($VMs -eq "Y"){

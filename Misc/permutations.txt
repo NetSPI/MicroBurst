@@ -68,3 +68,4 @@ tmp-logs
 userfiles
 web
 attachments
+img
