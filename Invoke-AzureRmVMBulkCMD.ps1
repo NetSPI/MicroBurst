@@ -68,7 +68,7 @@ Function Invoke-AzureRmVMBulkCMD
         ValueFromPipeline = $true,
         ValueFromPipelineByPropertyName = $true,
         HelpMessage="Individual VM Name(s) to use.")]
-        [string[]]$Name,
+        [string[]]$Name = $null,
         
         [Parameter(Mandatory=$true,
         HelpMessage="Script to run.")]
