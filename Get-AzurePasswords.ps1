@@ -55,7 +55,7 @@ Function Get-AzurePasswords
 
     .LINK
     https://blog.netspi.com/get-azurepasswords
-    https://blog.netspi.com/exporting-azure-runas-certificates/
+    https://blog.netspi.com/exporting-azure-runas-certificates
 #>
 
 
