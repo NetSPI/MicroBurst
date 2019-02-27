@@ -33,6 +33,7 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 * Anonymously Enumerating Azure Services - https://blog.netspi.com/enumerating-azure-services/
 * Anonymously Enumerating Azure File Resources - https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
 * Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions - https://blog.netspi.com/get-azurepasswords/
+* Get-AzurePasswords: Exporting Azure RunAs Certificates for Persistence https://blog.netspi.com/exporting-azure-runas-certificates/
 * Utilizing Azure Services for Red Team Engagements - https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/
 * Running PowerShell on Azure VMs at Scale - https://blog.netspi.com/running-powershell-scripts-on-azure-vms
 ### Presentations
