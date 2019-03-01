@@ -55,7 +55,7 @@ Function Get-AzurePasswords
 
     .LINK
     https://blog.netspi.com/get-azurepasswords
-    https://blog.netspi.com/exporting-azure-runas-certificates/
+    https://blog.netspi.com/exporting-azure-runas-certificates
 #>
 
 
@@ -85,7 +85,7 @@ Function Get-AzurePasswords
         [String]$CertificatePassword = "TotallyNotaHardcodedPassword...",
 
         [Parameter(Mandatory=$false,
-        HelpMessage="Export the certificates to local files.")]
+        HelpMessage="Export the Key Vault certificates to local files.")]
         [ValidateSet("Y","N")]
         [string]$ExportCerts = "N"
 
