@@ -136,21 +136,24 @@ Function Get-AzurePasswords
 
         foreach ($vault in $vaults){
             $vaultName = $vault.VaultName
-
-            try{$keys = Get-AzureKeyVaultKey -VaultName $vault.VaultName -ErrorAction Stop}
-            catch{Write-Verbose "`t`tUnable to access the keys for the $vaultName key vault"; continue}
-
-            # Dump Keys
-            Write-Verbose "`tExporting items from $vaultName"
-            foreach ($key in $keys){
-                $keyname = $key.Name
-                Write-Verbose "`t`tGetting Key value for the $keyname Key"
-                $keyValue = Get-AzureKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
             
-                # Add Key to the table
-                $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
+            try{
+                $keylist = Get-AzureKeyVaultKey -VaultName $vaultName -ErrorAction Stop
 
-                }
+                # Dump Keys
+                Write-Verbose "`tExporting items from $vaultName"
+                foreach ($key in $keylist){
+                    $keyname = $key.Name
+                    Write-Verbose "`t`tGetting Key value for the $keyname Key"
+                    $keyValue = Get-AzureKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
+            
+                    # Add Key to the table
+                    $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
+
+                    }
+            }
+            catch{Write-Verbose "`t`tUnable to access the keys for the $vaultName key vault"}
+            
 
             # Dump Secrets
             try{$secrets = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop}
