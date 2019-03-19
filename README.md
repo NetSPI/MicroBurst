@@ -34,8 +34,10 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 * Anonymously Enumerating Azure File Resources - https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
 * Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions - https://blog.netspi.com/get-azurepasswords/
 * Get-AzurePasswords: Exporting Azure RunAs Certificates for Persistence https://blog.netspi.com/exporting-azure-runas-certificates/
+* Using Azure Automation Accounts to Access Key Vaults - https://blog.netspi.com/azure-automation-accounts-key-stores
 * Utilizing Azure Services for Red Team Engagements - https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/
 * Running PowerShell on Azure VMs at Scale - https://blog.netspi.com/running-powershell-scripts-on-azure-vms
+
 ### Presentations
 * Attacking Azure Environments with PowerShell - DerbyCon2018 - https://www.youtube.com/watch?v=IdORwgxDpkw
 * DerbyCon2018 Slides - https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell
@@ -309,3 +311,36 @@ DESCRIPTION: This function will run a PowerShell script on all (or a list of) VM
     VERBOSE: Script Execution Completed in 37 seconds
 
 RELATED LINKS: https://blog.netspi.com/running-powershell-scripts-on-azure-vms
+
+# Get-AzureKeyVaults-Automation.ps1
+PS C:\> Import-Module .\Get-AzureKeyVaults-Automation.ps1
+
+PS C:\> Get-Help Get-AzureKeyVaults-Automation
+
+NAME: Get-AzureKeyVaults-Automation
+
+SYNOPSIS: Dumps all available Key Vault Keys/Secrets from an Azure subscription via Automation Accounts. Pipe to Out-Gridview, ft -AutoSize, or Export-CSV for easier parsing.
+
+SYNTAX: Get-AzureKeyVaults-Automation [[-Subscription] <String>] [[-CertificatePassword] <String>] [[-ExportCerts] <String>] [<CommonParameters>]
+
+DESCRIPTION: This function will look for any Key Vault Keys/Secrets that are available to an Automation RunAs Account, or as a configured Automation credential. 
+    If either account has Key Vault permissions, the runbook will read the values directly out of the Key Vaults.
+    A runbook will be spun up, so it will create a log entry in the automation jobs.
+    Per the statements above, and the fact that you may try to access keys that you may not have permissions for... This should not be considered as Opsec Safe.
+
+    -------------------------- EXAMPLE 1 --------------------------
+    PS C:\MicroBurst>Get-AzureKeyVaults-Automation -Verbose
+    
+    VERBOSE: Logged In as kfosaaen@notasubscription.onmicrosoft.com
+    VERBOSE: Getting List of Azure Automation Accounts...
+    VERBOSE: 	Automation Credential (testcred) found for kfosaaen Automation Account
+    VERBOSE: 	Automation Credential (testCred2) found for kfosaaen Automation Account
+    VERBOSE: 	Getting getting available Key Vault Keys/Secrets using the kfosaaen Automation Account, testcred Credential, and the FCIGmKqaTkEUViN.ps1 Runbook
+    VERBOSE: 		Waiting for the automation job to complete
+    VERBOSE: 		Removing FCIGmKqaTkEUViN runbook from kfosaaen Automation Account
+    VERBOSE: 	Getting getting available Key Vault Keys/Secrets using the kfosaaen Automation Account, testCred2 Credential, and the HzROkCvceonUNdh.ps1 Runbook
+    VERBOSE: 		Waiting for the automation job to complete
+    VERBOSE: 		Removing HzROkCvceonUNdh runbook from kfosaaen Automation Account
+    VERBOSE: Automation Key Vault Dumping Activities Have Completed
+
+RELATED LINKS: https://blog.netspi.com/azure-automation-accounts-key-stores
