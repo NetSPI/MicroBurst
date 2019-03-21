@@ -444,6 +444,39 @@ Function Get-AzureDomainInfo
         $VMList | select ResourceGroupName,Name,Location,ProvisioningState,Zone | Export-Csv -NoTypeInformation -LiteralPath $folder"\VirtualMachines\VirtualMachines-Basic.csv"
 
         Write-Verbose "`t$VMCount Virtual Machines enumerated."
+
+        Write-Verbose "Getting Virtual Machine Scale Sets..."
+
+        $scaleSets = Get-AzureRmVmss
+ 
+        # Set Up Data Table
+        $vmssDT = New-Object System.Data.DataTable("vmssVMs")
+        $columns = @("Name","ComputerName","PrivateIP","AdminUser","AdminPassword","Secrets","ProvisioningState")
+        foreach ($col in $columns) {$vmssDT.Columns.Add($col) | Out-Null}
+        $vmssCount = $scaleSets.Count
+        foreach($sSet in $scaleSets){
+            $instanceIds = Get-AzureRmVmssVM -ResourceGroupName $sSet.ResourceGroupName -VMScaleSetName $sSet.Name 
+            foreach($sInstance in $instanceIds){
+
+                $vmssVMs = Get-AzureRmVmssVM -ResourceGroupName $sInstance.ResourceGroupName -VMScaleSetName $sSet.Name -InstanceId $sInstance.InstanceId
+                $nicName = ($vmssVMs.NetworkProfile.NetworkInterfaces[0].Id).Split('/')[-1]
+
+                # Correct the resource name
+                $resourceName = $sSet.Name + "/" + $vmssVMs.InstanceId + "/" + $nicName
+                
+                # Get resource interface config
+                $target = Get-AzureRmResource -ResourceGroupName $sInstance.ResourceGroupName -ResourceType Microsoft.Compute/virtualMachineScaleSets/virtualMachines/networkInterfaces -ResourceName $resourceName -ApiVersion 2017-03-30
+
+                # Write the Data Table to the file
+                $vmssDT.Rows.Add($vmssVMs.Name,$vmssVMs.OsProfile.ComputerName,$target.Properties.ipConfigurations[0].properties.privateIPAddress,$vmssVMs.OsProfile.AdminUsername,$vmssVMs.OsProfile.AdminPassword,$vmssVMs.OsProfile.Secrets,$vmssVMs.ProvisioningState) | Out-Null
+                                
+            }
+        }
+
+        $vmssDT | Export-Csv -NoTypeInformation -LiteralPath $folder"\VirtualMachines\VirtualMachineScaleSets.csv"
+
+        Write-Verbose "`t$vmssCount Virtual Machine Scale Sets enumerated."
+
     }
 
     if($NetworkInfo -eq "Y"){
