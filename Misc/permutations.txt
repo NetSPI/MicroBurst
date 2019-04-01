@@ -65,6 +65,7 @@ storageaccount
 test
 tmp
 tmp-logs
+themes
 useast
 useast2
 centralus

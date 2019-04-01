@@ -429,6 +429,10 @@ Function Get-AzureDomainInfo
         # Write Disk info to file
         $disks | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\Disks.CSV"
         $disks | ForEach-Object{if($_.EncryptionSettings -eq $null){$_.Name | Out-File -LiteralPath $folder"\Resources\Disks-NoEncryption.txt"}}
+        
+        # Get Deployments and Parameters
+        Write-Verbose "Getting Azure Deployments and Parameters..."
+        Get-AzureRmResourceGroup | Get-AzureRmResourceGroupDeployment |  Out-File -LiteralPath $folder"\Resources\Deployments.txt"
     }
 
     if ($VMs -eq "Y"){

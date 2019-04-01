@@ -108,6 +108,8 @@ Function Get-AzureKeyVaults-Automation
         # Set name of Automation Account
         $verboseName = $AutoAccount.AutomationAccountName
 
+        $jobList = @()
+
         # If the runbook doesn't exist, don't run it
         if (Test-Path $PSScriptRoot\Misc\KeyVaultRunBook.ps1 -PathType Leaf){
                 
@@ -138,6 +140,8 @@ Function Get-AzureKeyVaults-Automation
             foreach ($jobToRun in $jobList){
                 $jobToRunName = $jobToRun.split(" ")[0]
                 $jobToRunCredential = $jobToRun.split(" ")[1]
+                if($jobToRunCredential -eq $null){$jobToRunCredential = "RunAs"}
+
                 Write-Verbose "`tGetting getting available Key Vault Keys/Secrets using the $verboseName Automation Account, $jobToRunCredential Credential, and the $jobToRunName.ps1 Runbook"
                 try{
                     # Import the Runbook
