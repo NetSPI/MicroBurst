@@ -4,7 +4,7 @@
 [![stars badge]][stars] 
 [![forks badge]][forks] 
 [![issues badge]][issues]
-<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/kfosaaen.svg?style=social">
+![Twitter Follow](https://img.shields.io/twitter/follow/kfosaaen.svg?style=social)
 
 
 [licence badge]:https://img.shields.io/badge/license-New%20BSD-blue.svg
