@@ -3,12 +3,15 @@
 [![licence badge]][licence] 
 [![stars badge]][stars] 
 [![forks badge]][forks] 
-[![issues badge]][issues] |
+[![issues badge]][issues]
+<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/kfosaaen.svg?style=social">
+
 
 [licence badge]:https://img.shields.io/badge/license-New%20BSD-blue.svg
 [stars badge]:https://img.shields.io/github/stars/NetSPI/MicroBurst.svg
 [forks badge]:https://img.shields.io/github/forks/NetSPI/MicroBurst.svg
 [issues badge]:https://img.shields.io/github/issues/NetSPI/MicroBurst.svg
+
 
 [licence]:https://github.com/NetSPI/MicroBurst/blob/master/LICENSE.txt
 [stars]:https://github.com/NetSPI/MicroBurst/stargazers
