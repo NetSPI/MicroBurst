@@ -18,6 +18,7 @@ database
 data-private
 data-public
 dev
+demo
 dns
 docker
 exe
