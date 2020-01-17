@@ -347,3 +347,63 @@ DESCRIPTION: This function will look for any Key Vault Keys/Secrets that are ava
     VERBOSE: Automation Key Vault Dumping Activities Have Completed
 
 RELATED LINKS: https://blog.netspi.com/azure-automation-accounts-key-stores
+
+# Get-AzureVMPluginSettings.ps1
+PS C:\> Import-Module .\Get-AzureVMPluginSettings.ps1
+
+PS C:\> Get-Help Get-AzureVMPluginSettings -full
+
+NAME
+    Get-AzureVMPluginSettings
+
+SYNOPSIS
+    PowerShell function for dumping information from Azure VM Plugin Settings
+
+
+SYNTAX
+    Get-AzureVMPluginSettings [<CommonParameters>]
+
+
+DESCRIPTION
+    The function will read all available plugin settings, decrypt protected values (if the required certificate can be
+    found) and return all the settings.
+
+
+PARAMETERS
+    <CommonParameters>
+        This cmdlet supports the common parameters: Verbose, Debug,
+        ErrorAction, ErrorVariable, WarningAction, WarningVariable,
+        OutBuffer, PipelineVariable, and OutVariable. For more information, see
+        about_CommonParameters (https:/go.microsoft.com/fwlink/?LinkID=113216).
+
+INPUTS
+
+OUTPUTS
+
+    -------------------------- EXAMPLE 1 --------------------------
+
+    PS C:\>Get-AzureVMPluginSettings
+
+    FullFileName                    :
+    C:\Packages\Plugins\Microsoft.Azure.Security.IaaSAntimalware\1.5.5.9\RuntimeSettings\0.settings
+    ProtectedSettingsCertThumbprint :
+    ProtectedSettings               :
+    ProtectedSettingsDecrypted      :
+    PublicSettings                  :
+    {"AntimalwareEnabled":true,"RealtimeProtectionEnabled":"false","ScheduledScanSettings":{...},"Exclusions":{...}}
+
+    FullFileName                    :
+    C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\1.10.5\RuntimeSettings\0.settings
+    ProtectedSettingsCertThumbprint : 23B8893CD7712293DF75FE0A19AFECF1CFF0119D
+    ProtectedSettings               : MIIB8AYJKoZIhvcNAQc...UNMih8=
+    ProtectedSettingsDecrypted      : {"fileUris":["http://.../netspi/launcher.ps1"]}
+    PublicSettings                  : {"commandToExecute":"powershell -ExecutionPolicy Unrestricted -file launcher.ps1
+    "}
+
+    FullFileName                    :
+    C:\Packages\Plugins\Microsoft.CPlat.Core.RunCommandWindows\1.1.3\RuntimeSettings\1.settings
+    ProtectedSettingsCertThumbprint : C85DD4C5E9614D2958C66B3CE8AF383034D6193E
+    ProtectedSettings               : MIIBsAYJKoZI...B+E0ZomM6gAghguFCQ28f2w==
+    ProtectedSettingsDecrypted      :
+    PublicSettings                  : {"script":["whoami"]}
+
