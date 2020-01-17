@@ -24,27 +24,30 @@
 MicroBurst includes functions and scripts that support Azure Services discovery, weak configuration auditing, and post exploitation actions such as credential dumping. It is intended to be used during penetration tests where Azure is in use.
 
 ### Author, Contributors, and License
-* Author: Karl Fosaaen (@kfosaaen), NetSPI - 2018
-* Contributors: Scott Sutherland (@_nullbind), Thomas Elling (@thomaselling)
+* Author: Karl Fosaaen (@kfosaaen), NetSPI
+* Contributors: Scott Sutherland (@_nullbind), Thomas Elling (@thomaselling), Jake Karnes (jakekarnes42)
 * License: BSD 3-Clause
 * Required Dependencies: Azure, AzureRM, and MSOnline PowerShell Modules
 
 ### Importing the Module
 	Import-Module .\MicroBurst.psm1
 
-### Blogs
-* Anonymously Enumerating Azure Services - https://blog.netspi.com/enumerating-azure-services/
-* Anonymously Enumerating Azure File Resources - https://blog.netspi.com/anonymously-enumerating-azure-file-resources/
-* Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions - https://blog.netspi.com/get-azurepasswords/
-* Get-AzurePasswords: Exporting Azure RunAs Certificates for Persistence https://blog.netspi.com/exporting-azure-runas-certificates/
-* Using Azure Automation Accounts to Access Key Vaults - https://blog.netspi.com/azure-automation-accounts-key-stores
-* Utilizing Azure Services for Red Team Engagements - https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/
-* Running PowerShell on Azure VMs at Scale - https://blog.netspi.com/running-powershell-scripts-on-azure-vms
+### Related Blogs
+* <a href="https://blog.netspi.com/enumerating-azure-services/">Anonymously Enumerating Azure Services</a>
+* <a href="https://blog.netspi.com/anonymously-enumerating-azure-file-resources/">Anonymously Enumerating Azure File Resources</a>
+* <a href="https://blog.netspi.com/get-azurepasswords/">Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions</a>
+* <a href="https://blog.netspi.com/exporting-azure-runas-certificates/">Get-AzurePasswords: Exporting Azure RunAs Certificates for Persistence</a>
+* <a href="https://blog.netspi.com/azure-automation-accounts-key-stores">Using Azure Automation Accounts to Access Key Vaults</a>
+* <a href="https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/">Utilizing Azure Services for Red Team Engagements</a>
+* <a href="https://blog.netspi.com/running-powershell-scripts-on-azure-vms">Running PowerShell on Azure VMs at Scale</a>
+* <a href="https://blog.netspi.com/maintaining-azure-persistence-via-automation-accounts/">Maintaining Azure Persistence via Automation Accounts</a>
 
 ### Presentations
-* Attacking Azure Environments with PowerShell - DerbyCon2018 - https://www.youtube.com/watch?v=IdORwgxDpkw
-* DerbyCon2018 Slides - https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell
-* BSidesPDX Slides - https://www.slideshare.net/kfosaaen/bsides-portland-attacking-azure-environments-with-powershell
+* <a href="https://www.youtube.com/watch?v=EYtw-XPml0w">Adventures in Azure Privilege Escalation - DerbyCon 9</a>
+  - <a href="https://notpayloads.blob.core.windows.net/slides/Azure-PrivEsc-DerbyCon9.pdf">DerbyCon 9 (2019) Slides</a>
+* <a href="https://www.youtube.com/watch?v=IdORwgxDpkw">Attacking Azure Environments with PowerShell - DerbyCon 8</a>
+  - <a href="https://www.slideshare.net/kfosaaen/derbycon-8-attacking-azure-environments-with-powershell">DerbyCon 8 (2018) Slides</a>
+  - <a href="https://www.slideshare.net/kfosaaen/bsides-portland-attacking-azure-environments-with-powershell">BSidesPDX (2018) Slides</a>
 	
 ### Functions Information
 # Get-AzurePasswords.ps1
