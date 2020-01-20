@@ -1,18 +1,18 @@
 <#
-    File: Get-AzureVMPluginSettings.ps1
+    File: Get-AzureVMExtensionSettings.ps1
     Author: Jake Karnes, NetSPI - 2020
-    Description: PowerShell function for dumping information from Azure VM Plugin Settings
+    Description: PowerShell function for dumping information from Azure VM Extension Settings
 #>
 
-Function Get-AzureVMPluginSettings
+Function Get-AzureVMExtensionSettings
 {
 <#
     .SYNOPSIS
-        PowerShell function for dumping information from Azure VM Plugin Settings
+        PowerShell function for dumping information from Azure VM Extension Settings
 	.DESCRIPTION
-        The function will read all available plugin settings, decrypt protected values (if the required certificate can be found) and return all the settings.		
+        The function will read all available extension settings, decrypt protected values (if the required certificate can be found) and return all the settings.		
     .EXAMPLE
-        PS C:\> Get-AzureVMPluginSettings
+        PS C:\> Get-AzureVMExtensionSettings
 
         FullFileName                    : C:\Packages\Plugins\Microsoft.Azure.Security.IaaSAntimalware\1.5.5.9\RuntimeSettings\0.settings
         ProtectedSettingsCertThumbprint : 

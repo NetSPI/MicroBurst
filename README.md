@@ -348,24 +348,24 @@ DESCRIPTION: This function will look for any Key Vault Keys/Secrets that are ava
 
 RELATED LINKS: https://blog.netspi.com/azure-automation-accounts-key-stores
 
-# Get-AzureVMPluginSettings.ps1
-PS C:\> Import-Module .\Get-AzureVMPluginSettings.ps1
+# Get-AzureVMExtensionSettings.ps1
+PS C:\> Import-Module .\Get-AzureVMExtensionSettings.ps1
 
-PS C:\> Get-Help Get-AzureVMPluginSettings -full
+PS C:\> Get-Help Get-AzureVMExtensionSettings -full
 
 NAME
-    Get-AzureVMPluginSettings
+    Get-AzureVMExtensionSettings
 
 SYNOPSIS
-    PowerShell function for dumping information from Azure VM Plugin Settings
+    PowerShell function for dumping information from Azure VM Extension Settings
 
 
 SYNTAX
-    Get-AzureVMPluginSettings [<CommonParameters>]
+    Get-AzureVMExtensionSettings [<CommonParameters>]
 
 
 DESCRIPTION
-    The function will read all available plugin settings, decrypt protected values (if the required certificate can be
+    The function will read all available extension settings, decrypt protected values (if the required certificate can be
     found) and return all the settings.
 
 
@@ -382,7 +382,7 @@ OUTPUTS
 
     -------------------------- EXAMPLE 1 --------------------------
 
-    PS C:\>Get-AzureVMPluginSettings
+    PS C:\>Get-AzureVMExtensionSettings
 
     FullFileName                    :
     C:\Packages\Plugins\Microsoft.Azure.Security.IaaSAntimalware\1.5.5.9\RuntimeSettings\0.settings
