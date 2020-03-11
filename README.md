@@ -350,3 +350,67 @@ DESCRIPTION: This function will look for any Key Vault Keys/Secrets that are ava
     VERBOSE: Automation Key Vault Dumping Activities Have Completed
 
 RELATED LINKS: https://blog.netspi.com/azure-automation-accounts-key-stores
+
+# Get-AzureVMExtensionSettings.ps1
+PS C:\> Import-Module .\Get-AzureVMExtensionSettings.psm1
+
+PS C:\> Get-Help Get-AzureVMExtensionSettings -full
+
+NAME
+    Get-AzureVMExtensionSettings
+
+SYNOPSIS
+    PowerShell function for dumping information from Azure VM Extension Settings
+
+
+SYNTAX
+    Get-AzureVMExtensionSettings [<CommonParameters>]
+
+
+DESCRIPTION
+    The function will read all available extension settings, decrypt protected values (if the required certificate can be
+    found) and return all the settings.
+
+
+PARAMETERS
+    <CommonParameters>
+        This cmdlet supports the common parameters: Verbose, Debug,
+        ErrorAction, ErrorVariable, WarningAction, WarningVariable,
+        OutBuffer, PipelineVariable, and OutVariable. For more information, see
+        about_CommonParameters (https:/go.microsoft.com/fwlink/?LinkID=113216).
+
+INPUTS
+
+OUTPUTS
+
+    -------------------------- EXAMPLE 1 --------------------------
+
+	PS C:\> Get-AzureVMExtensionSettings
+
+	FileName                        : C:\Packages\Plugins\Microsoft.Azure.Security.IaaSAntimalware\1.5.5.9\RuntimeSettings\0.settings
+	ExtensionName                   : Microsoft.Azure.Security.IaaSAntimalware
+	ProtectedSettingsCertThumbprint : 
+	ProtectedSettings               : 
+	ProtectedSettingsDecrypted      : 
+	PublicSettings                  : {"AntimalwareEnabled":true,"RealtimeProtectionEnabled":"false","ScheduledScanSettings":{...},"Exclusions":{...}}
+
+	FileName                        : C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\1.10.5\RuntimeSettings\0.settings
+	ExtensionName                   : Microsoft.Compute.CustomScriptExtension
+	ProtectedSettingsCertThumbprint : 23B8893CD7...
+	ProtectedSettings               : MIIB8AYJKoZIhvcNAQc...UNMih8=
+	ProtectedSettingsDecrypted      : {"fileUris":["http://.../netspi/launcher.ps1"]}
+	PublicSettings                  : {"commandToExecute":"powershell -ExecutionPolicy Unrestricted -file launcher.ps1 "}
+
+	FileName                        : C:\Packages\Plugins\Microsoft.CPlat.Core.RunCommandWindows\1.1.3\RuntimeSettings\1.settings
+	ExtensionName                   : Microsoft.CPlat.Core.RunCommandWindows
+	ProtectedSettingsCertThumbprint : C85DD4C5E9...
+	ProtectedSettings               : MIIBsAYJKoZI...B+E0ZomM6gAghguFCQ28f2w==
+	ProtectedSettingsDecrypted      : 
+	PublicSettings                  : {"script":["whoami"]}
+	
+	FileName                        : C:\WindowsAzure\CollectGuestLogsTemp\5e3cfc7e-c8b2-4fce-96f0-6c1b2c2bc87d.zip\Config\WireServerRoleExtensionsConfig_f26eeb35-229d-4f5e-9877-f8666a1680e9._MGITest.xml
+	ExtensionName                   : Microsoft.Compute.VMAccessAgent
+	ProtectedSettingsCertThumbprint : 20304BDF13...
+	ProtectedSettings               : MIIB0AYJKoZI...GkBIzEtqohr/WJd5KSCK
+	ProtectedSettingsDecrypted      : {"Password":"[REDACTED]"}
+	PublicSettings                  : {"UserName":"[REDACTED]"}
