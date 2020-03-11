@@ -352,7 +352,7 @@ DESCRIPTION: This function will look for any Key Vault Keys/Secrets that are ava
 RELATED LINKS: https://blog.netspi.com/azure-automation-accounts-key-stores
 
 # Get-AzureVMExtensionSettings.ps1
-PS C:\> Import-Module .\Get-AzureVMExtensionSettings.psm1
+PS C:\> Import-Module .\Get-AzureVMExtensionSettings.ps1
 
 PS C:\> Get-Help Get-AzureVMExtensionSettings -full
 
