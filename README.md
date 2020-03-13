@@ -27,7 +27,7 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 * Author: Karl Fosaaen (@kfosaaen), NetSPI
 * Contributors: Scott Sutherland (@_nullbind), Thomas Elling (@thomaselling), Jake Karnes (jakekarnes42)
 * License: BSD 3-Clause
-* Required Dependencies: Azure, AzureRM, and MSOnline PowerShell Modules
+* Required Dependencies: Azure, AzureRM, AzureAD, and MSOnline PowerShell Modules
 
 ### Importing the Module
 	Import-Module .\MicroBurst.psm1
