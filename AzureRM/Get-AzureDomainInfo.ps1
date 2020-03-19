@@ -381,7 +381,7 @@ Function Get-AzureDomainInfo
 
         # Get/Write Available AzureSQL DBs
         Write-Verbose "Getting AzureSQL Resources..."
-        $azureSQLServers = AzureRmResource | where {$_.ResourceType -Like "Microsoft.Sql/servers"}
+        $azureSQLServers = Get-AzureRmResource | where {$_.ResourceType -Like "Microsoft.Sql/servers"}
         $azureSQLServersCount = @($azureSQLServers).Count
         $azureSQLDatabasesCount = 0
 
