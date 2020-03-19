@@ -28,10 +28,15 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 * Contributors: Scott Sutherland (@_nullbind), Thomas Elling (@thomaselling), Jake Karnes (jakekarnes42)
 * License: BSD 3-Clause
 * Required Dependencies: Az, Azure, AzureRM, AzureAD, and MSOnline PowerShell Modules are all used in different scripts
-* Dependencies Note: Originally written with the AzureRM PS modules, older scripts are being ported to their newer Az equivalents
+* Dependencies Note: Originally written with the AzureRM PS modules, older scripts have being ported to their newer Az equivalents
 
 ### Importing the Module
 	Import-Module .\MicroBurst.psm1
+This will import all applicable functions based off of the currently installed modules in your environment.
+Recommended Modules to install:
+* <a href="https://docs.microsoft.com/en-us/powershell/azure/new-azureps-module-az?view=azps-3.6.1">Az</a>
+* <a href="https://docs.microsoft.com/en-us/powershell/module/azuread/?view=azureadps-2.0">AzureAd</a>
+* <a href="https://docs.microsoft.com/en-us/powershell/module/msonline/?view=azureadps-1.0">MSOnline</a>
 
 ### Related Blogs
 * <a href="https://blog.netspi.com/enumerating-azure-services/">Anonymously Enumerating Azure Services</a>
