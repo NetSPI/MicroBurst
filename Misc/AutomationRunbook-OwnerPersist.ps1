@@ -18,7 +18,7 @@ $azureADConnection = Connect-AzureAD -TenantId $servicePrincipalConnection.Tenan
     -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
 
 # Ensures you do not inherit an AzureRMContext in your runbook
-Disable-AzureRmContextAutosave –Scope Process | out-null
+Disable-AzureRmContextAutosave -Scope Process | out-null
 
 # Logging in to Azure RM with Service Principal
 $azureRMConnection = Connect-AzureRmAccount -ServicePrincipal -Tenant $servicePrincipalConnection.TenantID `
