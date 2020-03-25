@@ -39,3 +39,7 @@ if(!(Get-Module msonline)){
     }
     catch{Write-Host -ForegroundColor DarkRed "MSOnline module not installed, checking other modules"}
 }
+
+# Import Additional Functions
+
+Import-Module $PSScriptRoot\Misc\MicroBurst-Misc.psm1

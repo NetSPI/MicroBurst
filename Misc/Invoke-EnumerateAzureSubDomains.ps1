@@ -66,7 +66,7 @@ Function Invoke-EnumerateAzureSubDomains
 
         [Parameter(Mandatory=$false,
         HelpMessage="Specific permutations file to use.")]
-        [string]$Permutations = "$PSScriptRoot\Misc\permutations.txt"
+        [string]$Permutations = "$PSScriptRoot\permutations.txt"
 
     )
 
