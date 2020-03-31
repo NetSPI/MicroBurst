@@ -43,3 +43,4 @@ if(!(Get-Module msonline)){
 # Import Additional Functions
 
 Import-Module $PSScriptRoot\Misc\MicroBurst-Misc.psm1
+Import-Module $PSScriptRoot\REST\MicroBurst-AzureREST.psm1
