@@ -1,4 +1,4 @@
-﻿Function Get-AZStorageKeysREST
+﻿Function Get-AzStorageKeysREST
 {
 
     # Author: Karl Fosaaen (@kfosaaen), NetSPI - 2020
@@ -30,12 +30,22 @@
         if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
 
     }
-    else{$subChoice = $SubscriptionId}
+    else{$subChoice = $SubscriptionId; $noLoop = 1}
+
+    # Create data table to house results
+    $TempTbl = New-Object System.Data.DataTable 
+    $TempTbl.Columns.Add("StorageAccount") | Out-Null
+    $TempTbl.Columns.Add("Key1") | Out-Null
+    $TempTbl.Columns.Add("Key2") | Out-Null
+    $TempTbl.Columns.Add("Key1-Permissions") | Out-Null
+    $TempTbl.Columns.Add("Key2-Permissions") | Out-Null
+    $TempTbl.Columns.Add("SubscriptionName") | Out-Null
 
     # Iterate through each subscription and list keys
     foreach($sub in $subChoice){
         
-        if($SubscriptionId -ne ''){}
+        # If subs are chosen from a list, grab the Id
+        if($noLoop){}
         else{$SubscriptionId = $sub.subscriptionId}
 
         if($sub.displayName -ne $null){$subName = $sub.displayName; Write-Verbose "Gathering storage accounts for the $subName subscription"}
@@ -49,14 +59,7 @@
         $storageACCTS = ($responseKeys.Content | ConvertFrom-Json).value
 
 
-        # Create data table to house results
-        $TempTbl = New-Object System.Data.DataTable 
-        $TempTbl.Columns.Add("StorageAccount") | Out-Null
-        $TempTbl.Columns.Add("Key1") | Out-Null
-        $TempTbl.Columns.Add("Key2") | Out-Null
-        $TempTbl.Columns.Add("Key1-Permissions") | Out-Null
-        $TempTbl.Columns.Add("Key2-Permissions") | Out-Null
-        $TempTbl.Columns.Add("SubscriptionName") | Out-Null
+
 
         # Request access keys for all storage accounts
         $storageACCTS | ForEach-Object {
@@ -78,6 +81,6 @@
 
         }
         $SubscriptionId = $null
-        Write-Output $TempTbl
-    }        
+    }   
+    Write-Output $TempTbl     
 }

@@ -69,7 +69,17 @@ Function Get-AzPasswords
         HelpMessage="Dump App Services Configurations.")]
         [ValidateSet("Y","N")]
         [String]$AppServices = "Y",
-        
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump Azure Container Registry Admin passwords.")]
+        [ValidateSet("Y","N")]
+        [String]$ACR = "Y",
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump Storage Account Keys.")]
+        [ValidateSet("Y","N")]
+        [String]$StorageAccounts = "Y",
+                
         [parameter(Mandatory=$false,
         HelpMessage="Dump Automation Accounts.")]
         [ValidateSet("Y","N")]
@@ -104,7 +114,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts}
         break
     }
 
@@ -124,12 +134,14 @@ Function Get-AzPasswords
     $TempTblCreds.Columns.Add("Vault") | Out-Null
     $TempTblCreds.Columns.Add("Subscription") | Out-Null
 
+
+    $subName = (Get-AzSubscription -SubscriptionId $Subscription).Name
+
     if($Keys -eq 'Y'){
         # Key Vault Section
         $vaults = Get-AzKeyVault
         Write-Verbose "Getting List of Key Vaults..."
-        $subName = (Get-AzSubscription -SubscriptionId $Subscription).Name
-
+    
         foreach ($vault in $vaults){
             $vaultName = $vault.VaultName
 
@@ -218,6 +230,36 @@ Function Get-AzPasswords
                 Write-Verbose "`tProfile available for $appServiceName"
             }
             catch{Write-Verbose "`tNo profile available for $appServiceName"}
+        }
+    }
+
+    if ($ACR -eq 'Y'){
+        # Container Registry Section
+        Write-Verbose "Getting List of Azure Container Registries..."
+        $registries = Get-AzContainerRegistry
+        $registries | ForEach-Object {
+            if ($_.AdminUserEnabled -eq 'True'){
+                
+                $loginServer = $_.LoginServer
+                Write-Verbose "`tGetting the Admin User password for $loginServer"
+                $ACRpasswords = Get-AzContainerRegistryCredential -ResourceGroupName $_.ResourceGroupName -Name $_.Name
+                $TempTblCreds.Rows.Add("ACR-AdminUser",$_.LoginServer,$ACRpasswords.Username,$ACRpasswords.Password,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                $TempTblCreds.Rows.Add("ACR-AdminUser",$_.LoginServer,$ACRpasswords.Username,$ACRpasswords.Password2,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+            }
+        }
+    }
+
+    if($StorageAccounts -eq 'Y'){
+        # Storage Account Section
+        Write-Verbose "Getting List of Storage Accounts..."
+        $storageAccountList = Get-AzStorageAccount
+        $storageAccountList | ForEach-Object {
+            $saName = $_.StorageAccountName
+            Write-Verbose "`tGetting the Storage Account keys for the $saName account"
+            $saKeys = Get-AzStorageAccountKey -ResourceGroupName $_.ResourceGroupName -Name $_.StorageAccountName
+            $saKeys | ForEach-Object{
+                $TempTblCreds.Rows.Add("Storage Account",$saName,$_.KeyName,$_.Value,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+            }
         }
     }
 
@@ -352,7 +394,7 @@ Function Get-AzPasswords
                                 if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
         
                                 #write to the table
-                                $TempTblCreds.Rows.Add("AzureAutomation Account",$AutoAccount.AutomationAccountName,$jobOutput[0],$jobOutput[1],"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                                $TempTblCreds.Rows.Add("Azure Automation Account",$AutoAccount.AutomationAccountName,$jobOutput[0],$jobOutput[1],"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
                             }
                             catch {}
 
