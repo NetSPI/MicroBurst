@@ -280,11 +280,13 @@ Function Get-AzDomainInfo
                             if ($pubfileName -eq $null){$pubfileName = "Empty_Container_Folder"}
                             Write-Verbose "`t`t`tPublic File Found - $pubfileName"
 
-                            $blobUrl = "https://$StorageAccountName.blob.core.windows.net/$containerName/"+$blobName.Name
-                            # Write out available files within "Blob" containers
-                            $blobUrl >> $folder"\Files\BlobFileURLs.txt"
-                                
+                            $blobName.Name | ForEach-Object{ 
+                                $blobUrl = (-join ("https://$StorageAccountName.blob.core.windows.net/$containerName/",$_))
+                                # Write out available files within "Blob" containers
+                                $blobUrl >> $folder"\Files\BlobFileURLs.txt"
+                                }
                             }
+
                         if ($publicStatus.PublicAccess -eq "Container"){
                             Write-Verbose "`t`t`t$containerName Container is Public" 
                             #Write public container URL to list
