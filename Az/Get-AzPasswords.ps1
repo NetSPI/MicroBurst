@@ -347,7 +347,7 @@ Function Get-AzPasswords
 
 #============================ Start Automation Script Execution =============================#
             # No creds handle
-            if (($autoCred -eq $null) -and ($jobList.Count -eq $null)){Write-Verbose "No Connections or Credentials configured for $verboseName Automation Account"}
+            if (($autoCred -eq $null) -and ($jobList -eq $null)){Write-Verbose "No Connections or Credentials configured for $verboseName Automation Account"}
 
             # If there's no connection jobs, don't run any
             if ($jobList.Count -ne $null){
@@ -375,13 +375,20 @@ Function Get-AzPasswords
                         }    
 
                         $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
-                                                
-                        # Write it to a local file
-                        $FileName = Join-Path $pwd $runAsName"-AzureRunAsCertificate.pfx"
-                        [IO.File]::WriteAllBytes($FileName, [Convert]::FromBase64String($jobOutput.Values))
+                          
+                        # if execution errors, delete the AuthenticateAs- ps1 file
+                        if($jobOutput.Exception){
+                            Write-Verbose "`t`tNo available certificate for the connection"
+                            Remove-Item -Path (Join-Path $pwd "AuthenticateAs-$runAsName.ps1") | Out-Null                            
+                        }
+                        # Else write it to a local file
+                        else{
+                            $FileName = Join-Path $pwd $runAsName"-AzureRunAsCertificate.pfx"
+                            [IO.File]::WriteAllBytes($FileName, [Convert]::FromBase64String($jobOutput.Values))
 
-                        $instructionsMSG = "`t`t`tRun AuthenticateAs-$runAsName.ps1 (as a local admin) to import the cert and login as the Automation Connection account"
-                        Write-Verbose $instructionsMSG
+                            $instructionsMSG = "`t`t`tRun AuthenticateAs-$runAsName.ps1 (as a local admin) to import the cert and login as the Automation Connection account"
+                            Write-Verbose $instructionsMSG                        
+                        }
 
                         # clean up
                         Write-Verbose "`t`tRemoving $jobName runbook from $verboseName Automation Account"
