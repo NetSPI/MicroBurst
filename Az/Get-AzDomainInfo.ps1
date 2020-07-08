@@ -426,7 +426,7 @@ Function Get-AzDomainInfo
 
         # Get list of Disks
         Write-Verbose "Getting Azure Disks..."
-        $disks = Get-AzDisk
+        $disks = (Get-AzDisk | select ResourceGroupName, ManagedBy, Zones, TimeCreated, OsType, HyperVGeneration, DiskSizeGB, DiskSizeBytes, UniqueId, EncryptionSettingsCollection, ProvisioningState, DiskIOPSReadWrite, DiskMBpsReadWrite, DiskIOPSReadOnly, DiskMBpsReadOnly, DiskState, MaxShares, Id, Name, Location -ExpandProperty Encryption)
         $disksCount = $disks.Count
         Write-Verbose "`t$disksCount Disks were enumerated."
         # Write Disk info to file
