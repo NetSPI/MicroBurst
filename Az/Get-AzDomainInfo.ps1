@@ -436,6 +436,10 @@ Function Get-AzDomainInfo
         # Get Deployments and Parameters
         Write-Verbose "Getting Azure Deployments and Parameters..."
         Get-AzResourceGroup | Get-AzResourceGroupDeployment |  Out-File -LiteralPath $folder"\Resources\Deployments.txt"
+
+        # Get Key Vault Policies
+        Write-Verbose "`tGetting Key Vault Policies..."
+        Get-AzKeyVault | ForEach-Object {$vault = Get-AzKeyVault -VaultName $_.VaultName; $vault.AccessPolicies | Export-Csv -NoTypeInformation -LiteralPath (-join ($folder,'\Resources\',$_.VaultName,'-Vault_Policies.csv'))}
     }
 
     if ($VMs -eq "Y"){

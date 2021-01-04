@@ -140,7 +140,7 @@ $lookupResult = ""
         # Set up Search        
         $BingQuery = "site:blob.core.windows.net "+$Base
 
-        $WebSearch = Invoke-RestMethod -Uri "https://api.cognitive.microsoft.com/bing/v7.0/search?q=$BingQuery&count=50" -Headers @{ "Ocp-Apim-Subscription-Key" = $BingAPIKey } 
+        $WebSearch = Invoke-RestMethod -Uri "https://api.bing.microsoft.com/v7.0/search?q=$BingQuery&count=50" -Headers @{ "Ocp-Apim-Subscription-Key" = $BingAPIKey } 
 
         # Parse URLS
         if ($WebSearch.webPages.value){
