@@ -181,9 +181,17 @@ Function Get-AzPasswords
                             $secretBytes = [convert]::FromBase64String($secretValue.SecretValueText)
                             [IO.File]::WriteAllBytes("$pwd\$secretname.pfx", $secretBytes)
                         }
-                
+
+                    # Fix implemented from here - https://docs.microsoft.com/en-us/azure/key-vault/secrets/quick-create-powershell
+                    $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secretValue.SecretValue)
+                    try {
+                       $secretValueText = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+                    } finally {
+                       [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+                    }
+
                     # Add Secret to the table
-                    $TempTblCreds.Rows.Add("Secret",$secretValue.Name,"N/A",$secretValue.SecretValueText,"N/A",$secretValue.Created,$secretValue.Updated,$secretValue.Enabled,$secretValue.ContentType,$vault.VaultName,$subName) | Out-Null
+                    $TempTblCreds.Rows.Add("Secret",$secretValue.Name,"N/A",$secretValueText,"N/A",$secretValue.Created,$secretValue.Updated,$secretValue.Enabled,$secretValue.ContentType,$vault.VaultName,$subName) | Out-Null
 
                     }
 
