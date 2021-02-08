@@ -70,12 +70,24 @@
                 # Get list of Keys
                 try{
                     Write-Verbose "`tGetting Keys for $vaultName"
-                    $keyList = ((Invoke-WebRequest -Uri (-join ('https://',$vault.name,'.vault.azure.net/keys?api-version=7.0')) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).content | ConvertFrom-Json).value
-                
-                    #$keyList
+                    
+                    #Instantiate running list that we can add to
+                    $keyListAll = @()
+
+                    $keyList = ((Invoke-WebRequest -Uri (-join ('https://',$vault.name,'.vault.azure.net/keys?api-version=7.0')) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).content | ConvertFrom-Json)
+                    
+                    $keyListAll += $keyList.value
+
+                    $nextKeys = $keyList.nextLink
+                    #If there are more keys, loop until we exhaust the vault
+                    while($nextKeys -ne $null){
+                        $getNext = ((Invoke-WebRequest -Uri $nextKeys -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).Content | ConvertFrom-Json)
+                        $nextKeys = $getNext.nextLink
+                        $keyListAll += $getNext.value
+                    }
 
                      # Get individual keys from vault
-                    $keyList | ForEach-Object{
+                    $keyListAll | ForEach-Object{
 
                         $keyValue = ((Invoke-WebRequest -Uri (-join ($_.kid,'?api-version=7.0')) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).content | ConvertFrom-Json)
                         $keyValue.key | ForEach-Object{
