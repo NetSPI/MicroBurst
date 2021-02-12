@@ -77,11 +77,25 @@
             
                 # Get Secrets
                 try{
-                    Write-Verbose "`tGetting Secrets for $vaultName"                
-                    $secretsList = ((Invoke-WebRequest -Uri (-join ('https://',$vault.name,'.vault.azure.net/secrets?api-version=7.0')) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).content | ConvertFrom-Json).value
-                
+                    Write-Verbose "`tGetting Secrets for $vaultName"
+                    #Instantiate running list that we can add to
+                    $secretsListAll = @()                
+                    $secretsList = ((Invoke-WebRequest -Uri (-join ('https://',$vault.name,'.vault.azure.net/secrets?api-version=7.0')) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).content | ConvertFrom-Json)
+                    
+                    $secretsListAll += $secretsList.value
+                    $nextSecrets = $secretsList.nextLink
+                    #If there are more secrets, loop until we exhaust the vault
+                    while($nextSecrets -ne $null)
+                    {
+                        $getNext = ((Invoke-WebRequest -Uri $nextSecrets -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).Content | ConvertFrom-Json)
+                        $nextSecrets = $getNext.nextLink
+                        $secretsListAll += $getNext.value
+
+                    }                   
+        
+                    
                     # Get Values for each Secret
-                    $secretsList | ForEach-Object{
+                    $secretsListAll | ForEach-Object{
                         $secretType = $_.contentType
                         if($secretType -eq $null){$secretType = "No_Type_Set"}
                         Write-Verbose "`t`tGetting a $secretType from $vaultName"
