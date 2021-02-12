@@ -276,7 +276,7 @@ Function Get-AzPasswords
                 foreach ($key in $keylist){
                     $keyname = $key.Name
                     Write-Verbose "`t`tGetting Key value for the $keyname Key"
-                    Try{
+                    try{
                         $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
             
                         # Add Key to the table
