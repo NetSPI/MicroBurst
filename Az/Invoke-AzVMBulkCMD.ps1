@@ -18,29 +18,19 @@ Function Invoke-AzVMBulkCMD
     .SYNOPSIS
         Runs a Powershell script against all (or select) VMs in a subscription/resource group/etc.
     .DESCRIPTION
-        This function will run a PowerShell script on all (or a list of) VMs in a subscription/resource group/etc. This can be handy for creating reverse shells, running Mimikatz, or doing practical automation of work.
+        This function will run a PowerShell script on all (or a list of) VMs in a subscription/resource group/etc. This can be handy for creating reverse shells, running tools, or doing practical automation of work.
     .PARAMETER Subscription
         Subscription to use.
     .PARAMETER ResourceGroup
         Restrict the script to a specific Resource Group.
     .EXAMPLE
-        PS C:\MicroBurst> Invoke-AzVMBulkCMD -Verbose -Script .\Mimikatz.ps1
-        Executing C:\MicroBurst\Mimikatz.ps1 against all (1) VMs in the Testing-Resources Subscription
+        PS C:\MicroBurst> Invoke-AzVMBulkCMD -Verbose -Script .\test.ps1
+        Executing C:\MicroBurst\test.ps1 against all (1) VMs in the Testing-Resources Subscription
         Are you Sure You Want To Proceed: (Y/n): 
-        VERBOSE: Running .\Mimikatz.ps1 on the Remote-West - (10.2.0.5 : 40.112.160.13) virtual machine (1 of 1)
+        VERBOSE: Running .\test.ps1 on the Remote-West - (10.2.0.5 : 40.112.160.13) virtual machine (1 of 1)
         VERBOSE: Script Status: Succeeded
         Script Output: 
-          .#####.   mimikatz 2.0 alpha (x64) release "Kiwi en C" (Feb 16 2015 22:15:28)
-         .## ^ ##.  
-         ## / \ ##  /* * *
-         ## \ / ##   Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )
-         '## v ##'   http://blog.gentilkiwi.com/mimikatz             (oe.eo)
-          '#####'                                     with 15 modules * * */
-
-
-        mimikatz(powershell) # sekurlsa::logonpasswords
-        [Truncated]
-        mimikatz(powershell) # exit
+        # exit
         Bye!
 
         VERBOSE: Script Execution Completed on Remote-West - (10.2.0.5 : 40.112.160.13)

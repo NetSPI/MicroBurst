@@ -171,7 +171,7 @@
                     Write-Output "`tGetting the RunAs certificate for $verboseName using the $jobName.ps1 Runbook"
                     try{
                            
-                        $jobOutput = Run-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobName.ps1 -resourceGroupId $account.id.split("/")[4]
+                        $jobOutput = Invoke-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobName.ps1 -resourceGroupId $account.id.split("/")[4]
                         
                         # if execution errors, delete the AuthenticateAs- ps1 file
                         if($jobOutput.Exception){
@@ -217,7 +217,7 @@
                         
                             Write-Output "`t`tGetting cleartext credentials for $subName using the $jobToRun.ps1 Runbook"             
 
-                            $jobOutput = Run-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobToRun.ps1 -resourceGroupId $account.id.split("/")[4]
+                            $jobOutput = Invoke-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobToRun.ps1 -resourceGroupId $account.id.split("/")[4]
                             # If there was an actual cred here, get the output and add it to the table                    
                             
                             #Kinda a hack. Should loop back around to this.
@@ -246,7 +246,7 @@
 
 
 #This function will run a local PowerShell script in a designated Automation Account. A new Runbook draft will be created, published, ran, and deleted. A job will persist in the "Jobs" tab.
-Function Run-AzRunbook {
+Function Invoke-AzRunbook {
     [CmdletBinding()]
     Param(
 

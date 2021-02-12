@@ -5,6 +5,7 @@ if(!(Get-Module Az)){
     try{
         Import-Module Az -ErrorAction Stop
         Import-Module $PSScriptRoot\Az\MicroBurst-Az.psm1
+        $azStatus = "1"
     }
     catch{Write-Host -ForegroundColor DarkRed "Az module not installed, checking other modules"}
 }
@@ -15,7 +16,6 @@ if(!(Get-Module AzureAD)){
     try{
         Import-Module AzureAD -ErrorAction Stop
         Import-Module $PSScriptRoot\AzureAD\MicroBurst-AzureAD.psm1
-        $azStatus = "1"
     }
     catch{Write-Host -ForegroundColor DarkRed "AzureAD module not installed, checking other modules"}
 }
@@ -27,6 +27,7 @@ if(!(Get-Module AzureRM)){
         Import-Module $PSScriptRoot\AzureRM\MicroBurst-AzureRM.psm1
     }
     catch{
+        # If Az is already installed, no need to warn on no AzureRM
         if($azStatus -ne "1"){Write-Host -ForegroundColor DarkRed "AzureRM module not installed, checking other modules"}
     }
 }
