@@ -277,7 +277,7 @@ Function Get-AzPasswords
                     $keyname = $key.Name
                     Write-Verbose "`t`tGetting Key value for the $keyname Key"
                     try{
-                        $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
+                        $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name -ErrorAction Stop
             
                         # Add Key to the table
                         $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
