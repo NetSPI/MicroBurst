@@ -57,6 +57,7 @@ secrets
 service
 services
 site
+slides
 splunk
 sql
 sql-logs

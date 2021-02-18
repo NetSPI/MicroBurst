@@ -86,7 +86,7 @@ $lookupResult = ""
         $lookup = ($Base+$domain).ToLower()
         Write-Verbose "Resolving - $lookup"
         try{($lookupResult = Resolve-DnsName $lookup -ErrorAction Stop -Verbose:$false | select Name | Select-Object -First 1)|Out-Null}catch{}
-        if ($lookupResult -ne ""){Write-Host "Found Storage Account -  $lookup"; $runningList += $lookup; if ($OutputFile){$lookup >> $OutputFile}}
+        if ($lookupResult -ne ""){Write-Host "Found Storage Account - $lookup"; $runningList += $lookup; if ($OutputFile){$lookup >> $OutputFile}}
         $lookupResult = ""
     }
 
@@ -206,11 +206,11 @@ $lookupResult = ""
                     $FileList = (Invoke-WebRequest -uri $uriList -Method Get).Content
                     # Microsoft includes these characters in the response, Thanks...
                     [xml]$xmlFileList = $FileList -replace "ï»¿"
-                    $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob.Url
+                    $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob.Name
 
                     # Parse the XML results
                     if($foundURL.Length -gt 1){
-                        foreach($url in $foundURL){Write-Host -ForegroundColor Cyan "`tPublic File Available: $url";if ($OutputFile){$url >> $OutputFile}}
+                        foreach($url in $foundURL){Write-Host -ForegroundColor Cyan "`tPublic File Available: https://$dirGuess/$url";if ($OutputFile){$url >> $OutputFile}}
                     }
                     else{Write-Host -ForegroundColor Cyan "`tEmpty Public Container Available: $uriList";if ($OutputFile){$uriList >> $OutputFile}}
                 }
