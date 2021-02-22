@@ -94,6 +94,11 @@ Function Get-AzPasswords
         HelpMessage="Password to use for exporting the Automation certificates.")]
         [String]$CertificatePassword = "TotallyNotaHardcodedPassword...",
 
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump keys for CosmosDB Accounts.")]
+        [ValidateSet("Y","N")]
+        [String]$CosmosDB = "Y",
+
         [Parameter(Mandatory=$false,
         HelpMessage="Export the Key Vault certificates to local files.")]
         [ValidateSet("Y","N")]
@@ -119,7 +124,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB}
         break
     }
 
@@ -661,6 +666,32 @@ Function Get-AzPasswords
         Get-Childitem -Path Cert:\CurrentUser\My -DocumentEncryptionCert -DnsName microburst | Remove-Item
 
     }
+    
+    if ($CosmosDB -eq 'Y'){
+        # Cosmos DB Section
+
+        Write-Verbose "Getting List of Azure CosmosDB Accounts..."
+
+        # Pipe all of the Resource Groups into Get-AzCosmosDBAccount
+        Get-AzResourceGroup | foreach-object {
+        
+            $cosmosDBaccounts = Get-AzCosmosDBAccount -ResourceGroupName $_.ResourceGroupName
+            
+            $currentRG = $_.ResourceGroupName
+
+            # Go through each account and pull the keys
+            $cosmosDBaccounts | ForEach-Object {
+                $currentDB = $_.Name
+                Write-Verbose "`tGetting the Keys for the $currentDB CosmosDB account"
+                $cDBkeys = Get-AzCosmosDBAccountKey -ResourceGroupName $currentRG -Name $_.Name
+                $TempTblCreds.Rows.Add("Azure CosmosDB Account",-join($currentDB,"-PrimaryReadonlyMasterKey"),"N/A",$cDBkeys.PrimaryReadonlyMasterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                $TempTblCreds.Rows.Add("Azure CosmosDB Account",-join($currentDB,"-SecondaryReadonlyMasterKey"),"N/A",$cDBkeys.SecondaryReadonlyMasterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                $TempTblCreds.Rows.Add("Azure CosmosDB Account",-join($currentDB,"-PrimaryMasterKey"),"N/A",$cDBkeys.PrimaryMasterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                $TempTblCreds.Rows.Add("Azure CosmosDB Account",-join($currentDB,"-SecondaryMasterKey"),"N/A",$cDBkeys.SecondaryMasterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null                
+            }
+        }
+    }
+
     Write-Verbose "Password Dumping Activities Have Completed"
 
     # Output Creds
