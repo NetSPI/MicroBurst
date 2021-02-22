@@ -40,15 +40,18 @@ Recommended Modules to install:
 * <a href="https://docs.microsoft.com/en-us/powershell/module/msonline/?view=azureadps-1.0">MSOnline</a>
 
 ### Related Blogs
+* <a href="https://blog.netspi.com/a-beginners-guide-to-gathering-azure-passwords/">A Beginners Guide to Gathering Azure Passwords</a>
 * <a href="https://blog.netspi.com/enumerating-azure-services/">Anonymously Enumerating Azure Services</a>
 * <a href="https://blog.netspi.com/anonymously-enumerating-azure-file-resources/">Anonymously Enumerating Azure File Resources</a>
-* <a href="https://blog.netspi.com/get-azurepasswords/">Get-AzurePasswords: A Tool for Dumping Credentials from Azure Subscriptions</a>
 * <a href="https://blog.netspi.com/exporting-azure-runas-certificates/">Get-AzurePasswords: Exporting Azure RunAs Certificates for Persistence</a>
 * <a href="https://blog.netspi.com/azure-automation-accounts-key-stores">Using Azure Automation Accounts to Access Key Vaults</a>
-* <a href="https://blog.netspi.com/utiilzing-azure-for-red-team-engagements/">Utilizing Azure Services for Red Team Engagements</a>
 * <a href="https://blog.netspi.com/running-powershell-scripts-on-azure-vms">Running PowerShell on Azure VMs at Scale</a>
 * <a href="https://blog.netspi.com/maintaining-azure-persistence-via-automation-accounts/">Maintaining Azure Persistence via Automation Accounts</a>
-* <a href="https://blog.netspi.com/a-beginners-guide-to-gathering-azure-passwords/">A Beginners Guide to Gathering Azure Passwords</a>
+* <a href="https://blog.netspi.com/decrypting-azure-vm-extension-settings-with-get-azurevmextensionsettings/">Decrypting Azure VM Extension Settings with Get-AzureVMExtensionSettings</a>
+* <a href="https://blog.netspi.com/attacking-azure-with-custom-script-extensions/">Attacking Azure with Custom Script Extensions</a>
+* <a href="https://blog.netspi.com/lateral-movement-azure-app-services/">Lateral Movement in Azure App Services</a>
+* <a href="https://blog.netspi.com/encrypting-password-data-in-get-azpasswords/">Get-AzPasswords: Encrypting Automation Password Data</a>
+* <a href="https://blog.netspi.com/azure-privilege-escalation-using-managed-identities/">Azure Privilege Escalation Using Managed Identities</a>
 
 ### Presentations
 * <a href="https://www.youtube.com/watch?v=EYtw-XPml0w">Adventures in Azure Privilege Escalation - DerbyCon 9</a>
