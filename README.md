@@ -38,6 +38,10 @@ MicroBurst includes functions and scripts that support Azure Services discovery,
 	Import-Module .\MicroBurst.psm1
 This will import all applicable functions based off of the currently installed modules in your environment.
 
+If you want to simplify the trusting of the code files, use the following "Unblock-File" command to recursively trust each of the downloaded files:
+
+	dir -Recurse .\MicroBurst-master | Unblock-File
+
 Recommended Modules to install:
 * <a href="https://docs.microsoft.com/en-us/powershell/azure/new-azureps-module-az?view=azps-3.6.1">Az</a>
 * <a href="https://docs.microsoft.com/en-us/powershell/module/azuread/?view=azureadps-2.0">AzureAd</a>
