@@ -291,7 +291,28 @@ Function Get-AzPasswords
 
                 }
             }
-            catch{Write-Verbose "`t`tUnable to access the keys for the $vaultName key vault"}
+            # KVs that have Networking policies will fail, so clean up policies here
+            catch{
+                Write-Verbose "`t`tUnable to access the keys for the $vaultName key vault"
+                # If key policies were changed, Revert them
+                if($needsKeyRevert){
+                    Write-Verbose "`t`tReverting the Key Access Policies for the current user on the $vaultName vault"
+                    # Revert the Keys, Secrets, and Certs policies
+                    Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToKeys $userPolicy.PermissionsToKeys
+                }
+                # If secrets policies were changed, Revert them
+                if($needsSecretRevert){
+                    Write-Verbose "`t`tReverting the Secrets Access Policies for the current user on the $vaultName vault"
+                    # Revert the Secrets policy
+                    Set-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID -PermissionsToSecrets $userPolicy.PermissionsToSecrets
+                }
+                # If Access Policy was added for your user, remove it
+                if($needsCleanup){
+                    Write-Verbose "`t`tRemoving current user from the Access Policies for the $vaultName vault"
+                    # Delete the user from the Access Policies
+                    Remove-AzKeyVaultAccessPolicy -VaultName $vaultName -ObjectId $currentOID
+                }
+            }
 
             # Dump Secrets
             try{$secrets = Get-AzKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop}
@@ -468,11 +489,15 @@ Function Get-AzPasswords
                 $autoConnectionTenantId = $detailAutoConnection.FieldDefinitionValues.TenantId
                 $autoConnectionApplicationId = $detailAutoConnection.FieldDefinitionValues.ApplicationId
 
+                # Get the actual cert name to pass into the runbook
+                $runbookCert = Get-AzAutomationCertificate -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | where Thumbprint -EQ $autoConnectionThumbprint
+                $runbookCertName = $runbookCert.Name
+
                 # Set Random names for the runbooks. Prevents conflict issues
                 $jobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
                                 
                     # Set the runbook to export the runas certificate and write Script to local file
-                    "`$RunAsCert = Get-AutomationCertificate -Name 'AzureRunAsCertificate'" | Out-File -FilePath "$pwd\$jobName.ps1" 
+                    "`$RunAsCert = Get-AutomationCertificate -Name '$runbookCertName'" | Out-File -FilePath "$pwd\$jobName.ps1" 
                     "`$CertificatePath = Join-Path `$env:temp $verboseName-AzureRunAsCertificate.pfx" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                     "`$Cert = `$RunAsCert.Export('pfx','$CertificatePassword')" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                     "Set-Content -Value `$Cert -Path `$CertificatePath -Force -Encoding Byte | Write-Verbose " | Out-File -FilePath "$pwd\$jobName.ps1" -Append
@@ -492,7 +517,7 @@ Function Get-AzPasswords
                     "write-output `$encryptedOut" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                         
                
-                # Cast Name for runas scripts for each connection
+                # Cast Name for runas scripts for each connection                
                 $runAsName = -join($verboseName,'-',$autoConnectionName)
 
                     "`$thumbprint = '$autoConnectionThumbprint'"| Out-File -FilePath "$pwd\AuthenticateAs-$runAsName.ps1"
