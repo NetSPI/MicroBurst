@@ -438,8 +438,39 @@ Function Get-AzDomainInfo
         Get-AzResourceGroup | Get-AzResourceGroupDeployment |  Out-File -LiteralPath $folder"\Resources\Deployments.txt"
 
         # Get Key Vault Policies
-        Write-Verbose "`tGetting Key Vault Policies..."
+        Write-Verbose "Getting Key Vault Policies..."
         Get-AzKeyVault | ForEach-Object {$vault = Get-AzKeyVault -VaultName $_.VaultName; $vault.AccessPolicies | Export-Csv -NoTypeInformation -LiteralPath (-join ($folder,'\Resources\',$_.VaultName,'-Vault_Policies.csv'))}
+
+        # Get Automation Accounts
+        Write-Verbose "Getting Automation Account Runbooks and Variables..."
+        $autoAccounts = Get-AzAutomationAccount
+
+        if ($autoAccounts){
+            # Create folder for Automation Accounts
+            if(Test-Path $folder"\Resources\AutomationAccounts"){}
+            else{New-Item -ItemType Directory $folder"\Resources\AutomationAccounts" | Out-Null}
+            
+            # Iterate Automation Accounts
+            $autoAccounts | ForEach-Object {
+            
+                # Create folder for each Automation Account
+                if(Test-Path (-join ($folder,"\Resources\AutomationAccounts\",$_.AutomationAccountName))){}
+                else{New-Item -ItemType Directory (-join ($folder,"\Resources\AutomationAccounts\",$_.AutomationAccountName)) | Out-Null}
+
+                # Get Automation Account Runbook code
+                Get-AzAutomationRunbook -ResourceGroupName $_.ResourceGroupName -AutomationAccountName $_.AutomationAccountName | Export-AzAutomationRunbook -OutputFolder (-join ($folder,'\Resources\AutomationAccounts\',$_.AutomationAccountName,'\')) | Out-Null
+
+                # Get Automation Account Variables
+                $aaVariables = Get-AzAutomationVariable -ResourceGroupName $_.ResourceGroupName -AutomationAccountName $_.AutomationAccountName 
+                if($aaVariables){$aaVariables | Out-File -Append (-join ($folder,'\Resources\AutomationAccounts\',$_.AutomationAccountName,'\Variables.txt')) | Out-Null}
+
+            }
+            $autoCounts = $autoAccounts.count
+            Write-Verbose "`t$autoCounts Automation Accounts were enumerated."
+        }
+
+        
+
     }
 
     if ($VMs -eq "Y"){
