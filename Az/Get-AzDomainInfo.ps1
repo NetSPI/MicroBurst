@@ -606,41 +606,55 @@ Function Get-AzDomainInfo
         $ownerGroups = $ownersList | where ObjectType -EQ group
         $ownerInherits = foreach ($ownerGroup in $ownerGroups){Get-AzADGroupMember -GroupObjectId $ownerGroup.objectId}
         
+        #Recursively enumerate nested groups for additional owners
+        $ownerNestedGroups = $ownerInherits | where ObjectType -EQ group
+        while($ownerNestedGroups -ne $null){
+            $ownerInherits += foreach ($nestedGroup in $ownerNestedGroups){Get-AzADGroupMember -GroupObjectId $nestedGroup.Id | Where-Object { $_ -NotIn $ownerInherits } }
+            $ownerNestedGroups = foreach ($nestedGroup in $ownerNestedGroups){Get-AzADGroupMember -GroupObjectId $nestedGroup.Id | Where-Object { $_ -NotIn $ownerInherits -and $_.ObjectType -eq 'Group' }}
+        }
+        
         # Write results to file
         if ($ownersList) {
                 $ownersList | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\Owners.csv"
                 # Write-verbose the counts
                 $ownerCounts = ($ownersList| where ObjectType -EQ user).Count
                 Write-Verbose "`t$ownerCounts Users with 'Owner' permissions were enumerated."
-            }
+        }
         if ($ownerInherits){
                 $ownerInherits | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\InheritedOwners.csv"
                 # Write-verbose the counts
                 $ownerCounts = $ownerInherits.Count
-                Write-Verbose "`t$ownerCounts Users with group inherited 'Owner' permissions were enumerated."
-            }
+                Write-Verbose "`t$ownerCounts entities with group-inherited 'Owner' permissions were enumerated."
+        }
         
         # Get the Roles, write them out
         $roles = Get-AzRoleDefinition 
         if($roles){$roles | select Name,Id,IsCustom,Description | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\Roles.csv"; $rolesCount = $roles.Count; Write-Verbose "`t$rolesCount roles were enumerated."}
 
-        # Get the Contributors, write them out
-        $contributors = $roleAssignment | where RoleDefinitionName -EQ Contributor
-        if ($contributors){
-            # Output to file
-            $contributors | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\Contributors.csv"
-
-            # Contributors that are Group Members
-            $contributors | where ObjectType -EQ Group | ForEach-Object{
-                $contributorGroupMembers = Get-AzADGroupMember -GroupObjectId $_.ObjectId
-                $objDisplayname = (Get-AzADGroup -ObjectId $_.ObjectId).DisplayName
-                if ($contributorGroupMembers){
-                        $contributorGroupMembers | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\"$objDisplayname"_InheritedContributors.csv"
-                        $contributorCounts = $contributorGroupMembers.Count
-                        Write-Verbose "`t$contributorCounts Users with 'Contributor' permissions were enumerated."
-                    }
-                }
-
+        # List the Contributors and list out any users in groups
+        $contributorsList = $roleAssignment| where RoleDefinitionName -EQ Contributor
+        $contributorGroups = $contributorsList | where ObjectType -EQ group
+        $contributorInherits = foreach ($contributorGroup in $contributorGroups){Get-AzADGroupMember -GroupObjectId $contributorGroup.objectId}
+        
+        #Recursively enumerate nested groups for additional contributors
+        $contributorNestedGroups = $contributorInherits | where ObjectType -EQ group
+        while($contributorNestedGroups -ne $null){
+            $contributorInherits += foreach ($nestedGroup in $contributorNestedGroups){Get-AzADGroupMember -GroupObjectId $nestedGroup.Id | Where-Object { $_ -NotIn $contributorInherits } }
+            $contributorNestedGroups = foreach ($nestedGroup in $contributorNestedGroups){Get-AzADGroupMember -GroupObjectId $nestedGroup.Id | Where-Object { $_ -NotIn $contributorInherits -and $_.ObjectType -eq 'Group' }}
+        }
+        
+        # Write results to file
+        if ($contributorsList) {
+                $contributorsList | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\Contributors.csv"
+                # Write-verbose the counts
+                $contributorCounts = $contributorsList.Count
+                Write-Verbose "`t$contributorCounts entities with 'Contributor' permissions were enumerated."
+        }
+        if ($contributorInherits){
+                $contributorInherits | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\InheritedContributors.csv"
+                # Write-verbose the counts
+                $contributorCounts = $contributorInherits.Count
+                Write-Verbose "`t$contributorCounts entities with group-inherited 'Contributor' permissions were enumerated."
         }
 
     }
