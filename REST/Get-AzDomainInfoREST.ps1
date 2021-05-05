@@ -78,7 +78,6 @@ Function Get-AzDomainInfoREST {
 
     Write-Verbose "Dumping information for subscription $SubscriptionID"
 
-
     # Folder Parameter Checking - Creates Az folder to separate from MSOL folder
     if ($folder){
         if(Test-Path $folder){
