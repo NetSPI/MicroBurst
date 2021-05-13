@@ -173,9 +173,6 @@
 
                     $connectionIter += 2
 
-                    Write-Output $jobName
-                    Write-Output $runAsName
-
                     Write-Output "`tGetting the RunAs certificate for $verboseName using the $jobName.ps1 Runbook"
                     try{
                            
