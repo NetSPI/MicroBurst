@@ -173,9 +173,6 @@ Function Get-AzAutomationAccountCredsREST {
 
                     $connectionIter += 2
 
-                    Write-Output $jobName
-                    Write-Output $runAsName
-
                     Write-Output "`tGetting the RunAs certificate for $verboseName using the $jobName.ps1 Runbook"
                     try{
                            
@@ -203,7 +200,7 @@ Function Get-AzAutomationAccountCredsREST {
                     }
                     Catch{
                     Write-Output "`tUser does not have permissions to import Runbook"
-                    Write-Host $_
+                    Write-Output $_
                     }
 
                     #Clean up local temp files
