@@ -197,7 +197,7 @@ $lookupResult = ""
             # URL for confirming container
             $uriGuess = "https://"+$dirGuess+"?restype=container"
             try{
-                $status = (Invoke-WebRequest -uri $uriGuess -ErrorAction Stop).StatusCode
+                $status = (Invoke-WebRequest -uri $uriGuess -ErrorAction Stop -UseBasicParsing).StatusCode
                 # 200 Response Confirms the Container
                 if ($status -eq 200){
                     Write-Host "Found Container - $dirGuess"
