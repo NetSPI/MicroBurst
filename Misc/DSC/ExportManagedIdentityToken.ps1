@@ -43,8 +43,8 @@ Configuration ExportManagedIdentityToken
 		{
 			SetScript = {
 				$metadataResponse = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/' -Method GET -Headers @{Metadata="true"} -UseBasicParsing
-                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
-                Invoke-RestMethod -Method 'Post' -URI $using:ExportURL -Body $metadataResponse.Content -ContentType "application/json"
+				[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+				Invoke-RestMethod -Method 'Post' -URI $using:ExportURL -Body $metadataResponse.Content -ContentType "application/json"
 			}
 			TestScript = { 
 				return $false 	
