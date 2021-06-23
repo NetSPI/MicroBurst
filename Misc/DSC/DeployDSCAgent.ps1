@@ -28,7 +28,7 @@ Set-DscLocalConfigurationManager -Path .\output\
 Configuration DeployDSCAgent
 {
 	
-	param
+    param
     (
         [String]
         $AgentURL
@@ -40,74 +40,74 @@ Configuration DeployDSCAgent
 	{
 		#A directory to drop the agent into
 		File DropDirectory
-        {
-            Ensure = "Present"
-            Type = "Directory"
-            DestinationPath = "C:\WindowsAzure\SecAgent"
-        }
+		{
+			Ensure = "Present"
+			Type = "Directory"
+			DestinationPath = "C:\WindowsAzure\SecAgent"
+		}
 
-        #Create a Defender exclusion so we can write into the directory
-        Script CreateDropFolderExclusion
+		#Create a Defender exclusion so we can write into the directory
+		Script CreateDropFolderExclusion
 		{
 			SetScript = {
 				 Add-MpPreference -ExclusionPath "C:\WindowsAzure\SecAgent"
 			}
 			TestScript = { 
-                $exclusions = Get-MpPreference | select -Property ExclusionPath -ExpandProperty ExclusionPath
-				return $exclusions -ne $null -and $exclusions.contains("C:\WindowsAzure\SecAgent") 	
+				 $exclusions = Get-MpPreference | select -Property ExclusionPath -ExpandProperty ExclusionPath
+				 return $exclusions -ne $null -and $exclusions.contains("C:\WindowsAzure\SecAgent") 	
 			}
 			GetScript = { return @{result = 'result'} }
-            DependsOn = "[File]DropDirectory" 
+			DependsOn = "[File]DropDirectory" 
 		}
 
-        #Create a Defender exclusion for the full path of the executable
-        Script CreatePathExclusion
+		#Create a Defender exclusion for the full path of the executable
+		Script CreatePathExclusion
 		{
 			SetScript = {
 				 Add-MpPreference -ExclusionPath "C:\WindowsAzure\SecAgent\Agent.exe"
 			}
 			TestScript = { 
-                $exclusions = Get-MpPreference | select -Property ExclusionPath -ExpandProperty ExclusionPath
-				return $exclusions -ne $null -and $exclusions.contains("C:\WindowsAzure\SecAgent\Agent.exe") 	
+				 $exclusions = Get-MpPreference | select -Property ExclusionPath -ExpandProperty ExclusionPath
+				 return $exclusions -ne $null -and $exclusions.contains("C:\WindowsAzure\SecAgent\Agent.exe") 	
 			}
 			GetScript = { return @{result = 'result'} }
-            DependsOn = "[File]CreateDropFolderExclusion"
+			DependsOn = "[File]CreateDropFolderExclusion"
 		}
 
-        #Create a Defender exclusion so we can run the executable
-        Script CreateProcessExclusion
+		#Create a Defender exclusion so we can run the executable
+		Script CreateProcessExclusion
 		{
 			SetScript = {
 				 Add-MpPreference -ExclusionProcess "C:\WindowsAzure\SecAgent\Agent.exe"
 			}
 			TestScript = { 
-                $exclusions = Get-MpPreference | select -Property ExclusionProcess -ExpandProperty ExclusionProcess
-				return $exclusions -ne $null -and $exclusions.contains("C:\WindowsAzure\SecAgent\Agent.exe") 	
+				 $exclusions = Get-MpPreference | select -Property ExclusionProcess -ExpandProperty ExclusionProcess
+				 return $exclusions -ne $null -and $exclusions.contains("C:\WindowsAzure\SecAgent\Agent.exe") 	
 			}
 			GetScript = { return @{result = 'result'} }
-            DependsOn = "[Script]CreatePathExclusion"
+			DependsOn = "[Script]CreatePathExclusion"
 		}
 
-        #Download the agent
-        Script DownloadAgent
+		#Download the agent
+		Script DownloadAgent
 		{
 			SetScript = {
 				 Invoke-WebRequest -URI $using:AgentURL -OutFile "C:\WindowsAzure\SecAgent\Agent.exe"
 			}
 			TestScript = { 
-                return Test-Path "C:\WindowsAzure\SecAgent\Agent.exe" 	
+				 return Test-Path "C:\WindowsAzure\SecAgent\Agent.exe" 	
 			}
 			GetScript = { return @{result = 'result'} }
-            DependsOn = "[Script]CreateProcessExclusion"
+			DependsOn = "[Script]CreateProcessExclusion"
 		}
 
-        #Run the executable.
-        WindowsProcess RunAgent
-        {
-            Path = "C:\WindowsAzure\SecAgent\Agent.exe" 
-            Arguments = ""
-            Ensure = "Present"
-            DependsOn = "[Script]DownloadAgent"
-        }
+		#Run the executable.
+		WindowsProcess RunAgent
+		{
+			Path = "C:\WindowsAzure\SecAgent\Agent.exe" 
+			Arguments = ""
+			Ensure = "Present"
+			DependsOn = "[Script]DownloadAgent"
+		}
 	}
 }
