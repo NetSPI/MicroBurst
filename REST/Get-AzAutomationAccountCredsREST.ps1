@@ -1,4 +1,4 @@
-﻿Function Get-AzAutomationAccountCredsREST {
+Function Get-AzAutomationAccountCredsREST {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$false,
@@ -200,7 +200,7 @@
                     }
                     Catch{
                     Write-Output "`tUser does not have permissions to import Runbook"
-                    Write-Host $_
+                    Write-Output $_
                     }
 
                     #Clean up local temp files
