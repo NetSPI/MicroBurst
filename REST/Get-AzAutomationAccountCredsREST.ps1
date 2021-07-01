@@ -1,4 +1,5 @@
 Function Get-AzAutomationAccountCredsREST {
+
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$false,
