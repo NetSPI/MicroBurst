@@ -466,7 +466,46 @@ Function Get-AzDomainInfo
             Write-Verbose "`t$autoCounts Automation Accounts were enumerated."
         }
 
-        
+        Write-Verbose "Getting Logic Apps..."
+        $allLogicApps = Get-AzLogicApp
+
+        if($allLogicApps){
+            # Create folder for Logic Apps
+            if(Test-Path $folder"\Resources\LogicApps"){}
+            else{New-Item -ItemType Directory $folder"\Resources\LogicApps" | Out-Null}
+
+            $logicAppCount = $allLogicApps.Count
+
+            foreach($app in $allLogicApps){
+
+            $appName = $app.Name.ToString()
+
+            # Create folder for each Logic App
+            if(Test-Path (-join ($folder,"\Resources\LogicApps\",$app.Name))){}
+            else{New-Item -ItemType Directory (-join ($folder,"\Resources\LogicApps\",$appName)) | Out-Null}
+    
+            $actions = ($app.Definition.ToString() | ConvertFrom-Json | select actions).actions
+
+            if($app.Definition){$app.Definition.ToString() | Out-File (-join ($folder, '\Resources\LogicApps\',$appName,'\definition.txt')) | Out-Null}
+
+            #App definition is returned as a Newtonsoft object, have to manipulate it a bit to get all of the desired output
+            $noteProperties = Get-Member -InputObject $actions | Where-Object {$_.MemberType -eq "NoteProperty"}
+            foreach($note in $noteProperties){
+                $noteName = $note.Name
+                $inputs = ($app.Definition.ToString() | ConvertFrom-Json | Select actions).actions.$noteName.inputs
+
+                if($inputs){$inputs | Format-Table -Wrap | Out-File -Append (-join ($folder,'\Resources\LogicApps\',$appName,'\inputs.txt')) | Out-Null}
+                
+            }
+
+            $params = $app.Definition.parameters
+            if($params){$params | Out-File (-join ($folder, '\Resources\LogicApps\',$appName, '\parameters.txt')) | Out-Null}
+
+          }
+
+        Write-Verbose "`t$logicAppCount Logic Apps were enumerated"
+       
+      }
 
     }
 
