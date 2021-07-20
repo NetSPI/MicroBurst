@@ -1,0 +1,90 @@
+{
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "For_each": {
+                "actions": {
+                    "Append_to_array_variable": {
+                        "inputs": {
+                            "name": "secrets_array",
+                            "value": "@body('Get_secret')"
+                        },
+                        "runAfter": {
+                            "Get_secret": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "AppendToArrayVariable"
+                    },
+                    "Get_secret": {
+                        "inputs": {
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['CONNECTION_PLACEHOLDER']['connectionId']"
+                                }
+                            },
+                            "method": "get",
+                            "path": "/secrets/@{encodeURIComponent(items('For_each')?['name'])}/value"
+                        },
+                        "runAfter": {},
+                        "type": "ApiConnection"
+                    }
+                },
+                "foreach": "@body('List_secrets')?['value']",
+                "runAfter": {
+                    "Initialize_variable": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Foreach"
+            },
+            "Initialize_variable": {
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "secrets_array",
+                            "type": "array"
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "List_secrets": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "InitializeVariable"
+            },
+            "List_secrets": {
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['CONNECTION_PLACEHOLDER']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/secrets"
+                },
+                "runAfter": {},
+                "type": "ApiConnection"
+            }
+        
+        },
+        "outputs":{
+            "result": {
+                "type": "Array",
+                "value": "@variables('secrets_array')"
+            }
+        },
+        "parameters":{
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "manual": {
+                "inputs": {},
+                "kind": "Http",
+                "type": "Request"
+            }
+        }
+    }
