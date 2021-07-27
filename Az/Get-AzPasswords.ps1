@@ -338,7 +338,7 @@ Function Get-AzPasswords
                     # Write Private Certs to file
                     if (($ExportCerts -eq "Y") -and ($secretType  -eq "application/x-pkcs12")){
                             Write-Verbose "`t`t`tWriting certificate for $secretname to $pwd\$secretname.pfx"
-                            $secretBytes = [convert]::FromBase64String($secretValue.SecretValueText)
+                            $secretBytes = [convert]::FromBase64String(($secretValue.SecretValue| ConvertFrom-SecureString))
                             [IO.File]::WriteAllBytes("$pwd\$secretname.pfx", $secretBytes)
                         }
 
@@ -645,7 +645,11 @@ Function Get-AzPasswords
                 foreach ($jobToRun in $jobList2){
                     # If the additional runbooks didn't write, don't run them
                     if (Test-Path $pwd\$jobToRun.ps1 -PathType Leaf){
-                        $autoCredCurrent = $autoCred[$autoCredIter]
+                        if($autoCred.Count -gt 1){
+                            $autoCredCurrent = $autoCred[$autoCredIter]
+                        }
+                        else{$autoCredCurrent = $autoCred}
+
                         Write-Verbose "`t`tGetting cleartext credentials for $autoCredCurrent using the $jobToRun.ps1 Runbook"
                         $autoCredIter++
                         try{
