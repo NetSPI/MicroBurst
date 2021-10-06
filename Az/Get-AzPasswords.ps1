@@ -381,41 +381,68 @@ Function Get-AzPasswords
     }
 
     if($AppServices -eq 'Y'){
+
         # App Services Section
         Write-Verbose "Getting List of Azure App Services..."
 
-        # Read App Services configs
-        $appServs = Get-AzWebApp
-        $appServs | ForEach-Object{
-            $appServiceName = $_.Name
-            $resourceGroupName = Get-AzResource -ResourceId $_.Id | select ResourceGroupName
-
-            # Get each config 
-            try{
-                [xml]$configFile = Get-AzWebAppPublishingProfile -ResourceGroup $resourceGroupName.ResourceGroupName -Name $_.Name -ErrorAction Stop
+        # Get-AzWebApp won't return site config parameters without an RG
+        $resourceGroups = Get-AzResourceGroup
+        
+        $resourceGroups | ForEach-Object{
+            # Read App Services configs
+            $appServs = Get-AzWebApp -ResourceGroupName $_.ResourceGroupName
+            $appServs | ForEach-Object{
+                $appServiceName = $_.Name
             
-                if ($configFile){
-                    foreach ($profile in $configFile.publishData.publishProfile){
-                        # Read Deployment Passwords and add to the output table
-                        $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName,$profile.userName,$profile.userPWD,$profile.publishUrl,"N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                # Get the site config parameters to find parameters that are KV references
+                $appServiceParameters = $_.SiteConfig.AppSettings | where Value -like '@Microsoft.KeyVault*'
+
+                $resourceGroupName = Get-AzResource -ResourceId $_.Id | select ResourceGroupName
+
+                # Get each config 
+                try{
+                    [xml]$configFile = Get-AzWebAppPublishingProfile -ResourceGroup $resourceGroupName.ResourceGroupName -Name $_.Name -ErrorAction Stop
+            
+                    if ($configFile){
+                        foreach ($profile in $configFile.publishData.publishProfile){
+                            # Read Deployment Passwords and add to the output table
+                            $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName,$profile.userName,$profile.userPWD,$profile.publishUrl,"N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+
+                            if($appServiceParameters.Count -gt 0){
+                                #Need to convert deployment creds to a basic authentication header
+                                $basicHeader = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes((-join(($profile.userName),":",($profile.userPWD)))))
+                                $configReq = Invoke-WebRequest -Verbose:$false -Method GET -Uri (-join ("https://", $appServiceName, ".scm.azurewebsites.net/api/settings")) -Headers @{Authorization="Basic $basicHeader"} -ErrorAction Continue
+                                $configResult = ($configReq.Content | ConvertFrom-Json)
+
+                                $appServiceParameters | ForEach-Object{
+                                    # Match the vault parameter and add it to the output
+                                    $TempTblCreds.Rows.Add("AppServiceVaultParameter",$appServiceName+"-Parameter",($_.Name),($configResult.($_.Name)),"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null                                    
+                                }
+                                $appServiceParameters = $null
+                            }                            
                     
-                        # Parse Connection Strings                    
-                        if ($profile.SQLServerDBConnectionString){
-                            $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName+"-ConnectionString","N/A",$profile.SQLServerDBConnectionString,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
+                            # Parse Connection Strings                    
+                            if ($profile.SQLServerDBConnectionString){
+                                $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName+"-ConnectionString","N/A",$profile.SQLServerDBConnectionString,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
+                            }
+                            if ($profile.mySQLDBConnectionString){
+                                $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName+"-ConnectionString","N/A",$profile.mySQLDBConnectionString,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
+                            }
                         }
-                        if ($profile.mySQLDBConnectionString){
-                            $TempTblCreds.Rows.Add("AppServiceConfig",$profile.profileName+"-ConnectionString","N/A",$profile.mySQLDBConnectionString,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
+
+                        # Grab additional custom connection strings
+                        $resourceName = $_.Name+"/connectionstrings"
+                        $resource = Invoke-AzResourceAction -ResourceGroupName $_.ResourceGroup -ResourceType Microsoft.Web/sites/config -ResourceName $resourceName -Action list -ApiVersion 2015-08-01 -Force
+                        $propName = $resource.properties | gm -M NoteProperty | select name
+                        
+                        if($resource.Properties.($propName.Name).type -eq 3){
+                            $TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+"-Custom-ConnectionString","N/A",$resource.Properties.($propName.Name).value,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
                         }
                     }
-                    # Grab additional custom connection strings
-                    $resourceName = $_.Name+"/connectionstrings"
-                    $resource = Invoke-AzResourceAction -ResourceGroupName $_.ResourceGroup -ResourceType Microsoft.Web/sites/config -ResourceName $resourceName -Action list -ApiVersion 2015-08-01 -Force
-                    $propName = $resource.properties | gm -M NoteProperty | select name
-                    if($resource.Properties.($propName.Name).type -eq 3){$TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+"-Custom-ConnectionString","N/A",$resource.Properties.($propName.Name).value,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null}
+                    Write-Verbose "`tProfile available for $appServiceName"
                 }
-                Write-Verbose "`tProfile available for $appServiceName"
+                catch{Write-Verbose "`tNo profile available for $appServiceName"}
             }
-            catch{Write-Verbose "`tNo profile available for $appServiceName"}
         }
     }
 
