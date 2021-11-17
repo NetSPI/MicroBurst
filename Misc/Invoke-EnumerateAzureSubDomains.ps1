@@ -88,7 +88,9 @@ Function Invoke-EnumerateAzureSubDomains
 					'vault.azure.net'='Key Vaults';
 					'azureedge.net'='CDN';
 					'search.windows.net'='Search Appliance';
-					'azure-api.net'='API Services'}
+					'azure-api.net'='API Services';
+					'azurecr.io'='Azure Container Registry'
+					}
 
     $runningList = @()
     $lookupResult = ""
