@@ -1,4 +1,5 @@
 $root
+$web
 access-logs
 accounting
 api
