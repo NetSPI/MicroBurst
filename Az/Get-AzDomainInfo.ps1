@@ -506,6 +506,23 @@ Function Get-AzDomainInfo
         Write-Verbose "`t$logicAppCount Logic Apps were enumerated"
        
       }
+      
+      #Sometimes Policy is used for conditional deployment of resources. Similar to Resource Deployment parameters, secrets are sometimes leaked in custom Policy definitions or assignments
+      Write-Verbose "Getting Custom Policy Definitions/Assignments..."
+      $PolicyDefinitions = Get-AzPolicyDefinition -Custom | Foreach-Object {$_.Properties.PolicyRule | ConvertTo-Json -Depth 100 }
+      $PolicyAssignments = Get-AzPolicyAssignment | Foreach-Object {$_ | ConvertTo-Json -Depth 100}
+      #Only write them out if we find custom definitions
+      if($PolicyDefinitions){
+        $PolicyDefinitions | Out-File $folder\"Resources\PolicyDefinitions.txt"
+        $PolicyAssignments | Out-File $folder\"Resources\PolicyAssignments.txt"
+        $PolicyDefinitionCount = $PolicyDefinitions.count
+        $PolicyAssignmentCount = $PolicyAssignments.count
+        Write-Verbose "`t$PolicyDefinitionCount custom policies and $PolicyAssignmentCount assignments were enumerated"
+      }
+
+
+     
+      
 
     }
 
@@ -522,6 +539,11 @@ Function Get-AzDomainInfo
         $VMList | select ResourceGroupName,Name,Location,ProvisioningState,Zone | Export-Csv -NoTypeInformation -LiteralPath $folder"\VirtualMachines\VirtualMachines-Basic.csv"
 
         Write-Verbose "`t$VMCount Virtual Machines enumerated."
+
+        #We can fetch the publicly available Virtual Machine extension settings. Sometimes secrets are leaked in the "Public Settings" field
+        Write-Verbose "`tGetting Virtual Machine Extension settings..."
+        $VMExtensions = $VMList | ForEach-Object -Process {Get-AzVMExtension -ResourceGroupName $_.ResourceGroupName -VMName $_.Name}
+        $VMExtensions | Out-File -FilePath $folder"\VirtualMachines\VMExtensions.txt"
 
         Write-Verbose "Getting Virtual Machine Scale Sets..."
 
