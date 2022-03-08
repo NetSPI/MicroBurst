@@ -62,6 +62,7 @@ Recommended Modules to install:
 * <a href="https://blog.netspi.com/azure-privilege-escalation-using-managed-identities/">Azure Privilege Escalation Using Managed Identities</a>
 * <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/giving-azure-a-rest/">Giving Azure a REST – Expanding REST API Capabilities</a>
 * <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/azure-persistence-with-desired-state-configurations/">Azure Persistence with Desired State Configurations</a>
+* <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/extract-credentials-from-azure-kubernetes-service/">How To Extract Credentials from Azure Kubernetes Service (AKS)</a>
 
 ### Presentations
 * <a href="https://www.youtube.com/watch?v=EYtw-XPml0w">Adventures in Azure Privilege Escalation - DerbyCon 9</a>
