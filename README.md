@@ -65,6 +65,7 @@ Recommended Modules to install:
 * <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/extract-credentials-from-azure-kubernetes-service/">How To Extract Credentials from Azure Kubernetes Service (AKS)</a>
 
 ### Presentations
+* <a href="https://youtu.be/CUTwkuiRgqg">Extracting all the Azure Passwords - DEF CON 29 - Cloud Village</a>
 * <a href="https://www.youtube.com/watch?v=EYtw-XPml0w">Adventures in Azure Privilege Escalation - DerbyCon 9</a>
   - <a href="https://notpayloads.blob.core.windows.net/slides/Azure-PrivEsc-DerbyCon9.pdf">DerbyCon 9 (2019) Slides</a>
 * <a href="https://www.youtube.com/watch?v=IdORwgxDpkw">Attacking Azure Environments with PowerShell - DerbyCon 8</a>
