@@ -109,6 +109,11 @@ Function Get-AzPasswords
         [String]$FunctionApps = "Y",
 
         [parameter(Mandatory=$false,
+        HelpMessage="Dump Conatiner App Secrets.")]
+        [ValidateSet("Y","N")]
+        [String]$ContainerApps = "Y",
+
+        [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
         [ValidateSet("Y","N")]
         [String]$ExportKube = "N",
@@ -143,7 +148,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps}
         break
     }
 
@@ -1016,6 +1021,42 @@ Function Get-AzPasswords
                 
                 $keyMembers | ForEach-Object{
                     $TempTblCreds.Rows.Add("Function App Host Key",$functAppName,$_.Name,(($_.Definition) -replace "String ") -replace (-join($_.Name,"=")),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                }
+            }
+        }
+    }
+
+    if ($ContainerApps -eq 'Y'){
+        
+        # Variable Set Up
+        $CAmanagementToken = (Get-AzAccessToken).Token
+        $subID = (Get-AzContext).Subscription.Id
+
+        # List Resource Groups
+        $RGURL = "https://management.azure.com/subscriptions/$subID/resourceGroups?api-version=2022-01-01"
+        $rgList = ((Invoke-WebRequest -UseBasicParsing -Uri $RGURL -Headers @{ Authorization ="Bearer $CAmanagementToken"} -Method GET -Verbose:$false).Content | ConvertFrom-Json).value
+
+        Write-Verbose "Getting List of Azure Container Apps"
+
+        # Foreach Resource Group, list Container Apps
+        $rgList | ForEach-Object {
+
+            # Get list of Container Apps
+            $CAListURL = "https://management.azure.com/subscriptions/$subID/resourceGroups/$($_.name)/providers/Microsoft.App/containerApps/?api-version=2022-01-01-preview"
+            $CAList = ((Invoke-WebRequest -UseBasicParsing -Uri $CAListURL -Headers @{ Authorization ="Bearer $CAmanagementToken"} -Method GET -Verbose:$false).Content | ConvertFrom-Json).value
+
+            if ($CAList -ne $null){                
+                # For Each Container App, get the secrets
+                $CAList | ForEach-Object{
+                    $CAName = ($_.id).split("/")[-1]
+                    Write-Verbose "`tGetting Container App Secrets from the $CAName application"
+                    $secretsURL = "https://management.azure.com$($_.id)/listSecrets?api-version=2022-01-01-preview"
+                    $CASecrets = ((Invoke-WebRequest -UseBasicParsing -Uri $secretsURL -Headers @{ Authorization ="Bearer $CAmanagementToken"; 'Content-Type' = "application/json"} -Method POST -Verbose:$false).Content | ConvertFrom-Json).value
+
+                    # Add the Secrets to the output table
+                    $CASecrets | ForEach-Object{
+                        $TempTblCreds.Rows.Add("Container App Secret",$CAName,$_.name,$_.value,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
+                    }
                 }
             }
         }
