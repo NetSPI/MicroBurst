@@ -114,6 +114,11 @@ Function Get-AzPasswords
         [String]$ContainerApps = "Y",
 
         [parameter(Mandatory=$false,
+        HelpMessage="Dump API Management Secrets.")]
+        [ValidateSet("Y","N")]
+        [String]$APIManagement = "Y",
+        
+        [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
         [ValidateSet("Y","N")]
         [String]$ExportKube = "N",
@@ -148,7 +153,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement}
         break
     }
 
@@ -1027,7 +1032,8 @@ Function Get-AzPasswords
     }
 
     if ($ContainerApps -eq 'Y'){
-        
+        # Container Apps Section
+
         # Variable Set Up
         $CAmanagementToken = (Get-AzAccessToken).Token
         $subID = (Get-AzContext).Subscription.Id
@@ -1057,6 +1063,30 @@ Function Get-AzPasswords
                     $CASecrets | ForEach-Object{
                         $TempTblCreds.Rows.Add("Container App Secret",$CAName,$_.name,$_.value,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
                     }
+                }
+            }
+        }
+    }
+
+    if ($APIManagement -eq 'Y'){
+        # API Management Section
+
+        Write-Verbose "Getting List of Azure API Management Services"
+        $APIlist = Get-AzApiManagement
+
+        $APIlist | ForEach-Object{
+            $APIMname = $_.Name
+            Write-Verbose "`tGetting API Named Value Secrets from the $APIMname Service"
+            $apimContext = New-AzApiManagementContext -ResourceGroupName $_.ResourceGroupName -ServiceName $_.Name
+            Get-AzApiManagementNamedValue -Context $apimContext | ForEach-Object{
+                if($_.Secret -eq $true){
+                    # Get the secret value
+                    $APIMsecret = Get-AzApiManagementNamedValueSecretValue -Context $apimContext -NamedValueId $_.NamedValueId
+                    
+                    Write-Verbose "`t`tGetting $($_.name) Secret"
+
+                    # Add the Secrets to the output table
+                    $TempTblCreds.Rows.Add("API Management Secret",$APIMname,$_.name,$APIMsecret.value,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
                 }
             }
         }
