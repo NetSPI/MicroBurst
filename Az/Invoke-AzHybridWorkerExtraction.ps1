@@ -63,7 +63,7 @@ function Invoke-AzHybridWorkerExtraction{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Invoke-HybridWorkerExtraction -Subscription $sub}
+        foreach ($sub in $subChoice) {Invoke-AzHybridWorkerExtraction -Subscription $sub}
         break
     }
 
