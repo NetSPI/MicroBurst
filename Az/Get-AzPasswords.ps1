@@ -117,6 +117,11 @@ Function Get-AzPasswords
         HelpMessage="Dump API Management Secrets.")]
         [ValidateSet("Y","N")]
         [String]$APIManagement = "Y",
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump Service Bus Namespace keys.")]
+        [ValidateSet("Y","N")]
+        [String]$ServiceBus = "Y",
         
         [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
@@ -153,7 +158,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus}
         break
     }
 
@@ -1080,14 +1085,39 @@ Function Get-AzPasswords
             $apimContext = New-AzApiManagementContext -ResourceGroupName $_.ResourceGroupName -ServiceName $_.Name
             Get-AzApiManagementNamedValue -Context $apimContext | ForEach-Object{
                 if($_.Secret -eq $true){
+                    $secretName = $_.name
+                    try{
                     # Get the secret value
-                    $APIMsecret = Get-AzApiManagementNamedValueSecretValue -Context $apimContext -NamedValueId $_.NamedValueId
+                        $APIMsecret = Get-AzApiManagementNamedValueSecretValue -Context $apimContext -NamedValueId $_.NamedValueId -ErrorAction Stop
                     
-                    Write-Verbose "`t`tGetting $($_.name) Secret"
+                        Write-Verbose "`t`tGetting $($_.name) Secret"
 
-                    # Add the Secrets to the output table
-                    $TempTblCreds.Rows.Add("API Management Secret",$APIMname,$_.name,$APIMsecret.value,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
+                        # Add the Secrets to the output table
+                        $TempTblCreds.Rows.Add("API Management Secret",$APIMname,$_.name,$APIMsecret.value,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
+                    }
+                    catch{Write-Verbose "`t`t$secretName Secret is a Key Vault Value, skipping..."}
                 }
+            }
+        }
+    }
+
+    if ($ServiceBus -eq 'Y'){
+    # Service Bus Namespace Section
+    $nameSpaces = Get-AzServiceBusNamespace
+
+    Write-Verbose "Getting List of Azure Service Bus Namespaces"
+
+    $nameSpaces | ForEach-Object{
+        $tempNamespace = $_
+        $authRule = Get-AzServiceBusAuthorizationRule -ResourceGroupName $_.ResourceGroupName -Namespace $_.Name
+        $authRule | ForEach-Object{
+            Write-Verbose "`tGetting Keys for the $($_.Name) Authorization Rule"
+
+            $SBkeys = Get-AzServiceBusKey -Namespace $tempNamespace.Name -Name $_.Name -ResourceGroupName $tempNamespace.ResourceGroupName
+            
+            # Add the Secrets to the output table
+            $TempTblCreds.Rows.Add("Service Bus Namespace Key",$tempNamespace.Name,-join($SBkeys.KeyName," - Primary Key"),$SBkeys.PrimaryKey,$SBkeys.PrimaryConnectionString,"N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+            $TempTblCreds.Rows.Add("Service Bus Namespace Key",$tempNamespace.Name,-join($SBkeys.KeyName," - Secondary Key"),$SBkeys.SecondaryKey,$SBkeys.SecondaryConnectionString,"N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
             }
         }
     }
