@@ -441,7 +441,7 @@ Function Get-AzPasswords
 
                                 $appServiceParameters | ForEach-Object{
                                     # Match the vault parameter and add it to the output
-                                    $TempTblCreds.Rows.Add("AppServiceVaultParameter",$appServiceName+"-Parameter",($_.Name),($configResult.($_.Name)),"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null                                    
+                                    $TempTblCreds.Rows.Add("AppServiceVaultParameter",$appServiceName+" - Parameter",($_.Name),($configResult.($_.Name)),"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null                                    
                                 }
                                 $appServiceParameters = $null
                             }                            
@@ -461,7 +461,20 @@ Function Get-AzPasswords
                         $propName = $resource.properties | gm -M NoteProperty | select name
                         
                         if($resource.Properties.($propName.Name).type -eq 3){
-                            $TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+"-Custom-ConnectionString","N/A",$resource.Properties.($propName.Name).value,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
+                            $TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+" - Custom-ConnectionString","N/A",$resource.Properties.($propName.Name).value,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null
+                        }
+
+                        # Grab Authentication Service Principals
+                        if(($_.SiteConfig.AppSettings | where Name -EQ 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET').value -ne $null){
+                            $spSecret = ($_.SiteConfig.AppSettings | where Name -EQ 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET').value
+
+                            # Use APIs to grab Client ID
+                            $mgmtToken = (Get-AzAccessToken -ResourceUrl 'https://management.azure.com/').Token
+                            $subID = (get-azcontext).Subscription.Id
+                            $servicePrincipalID = ((Invoke-WebRequest -Uri (-join('https://management.azure.com/subscriptions/',$subID,'/resourceGroups/',$_.ResourceGroup,'/providers/Microsoft.Web/sites/',$_.Name,'/Config/authsettingsV2/list?api-version=2018-11-01')) -UseBasicParsing -Headers @{ Authorization ="Bearer $mgmtToken"} -Verbose:$false ).content | ConvertFrom-Json).properties.identityProviders.azureActiveDirectory.registration.clientId
+
+                            $spClientID = ""
+                            $TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+" - ServicePrincipal",$servicePrincipalID,$spSecret,"N/A","N/A","N/A","N/A","Secret","N/A",$subName) | Out-Null
                         }
                     }
                     Write-Verbose "`tProfile available for $appServiceName"
