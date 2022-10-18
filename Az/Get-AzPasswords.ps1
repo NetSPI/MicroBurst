@@ -109,7 +109,7 @@ Function Get-AzPasswords
         [String]$FunctionApps = "Y",
 
         [parameter(Mandatory=$false,
-        HelpMessage="Dump Conatiner App Secrets.")]
+        HelpMessage="Dump Container App Secrets.")]
         [ValidateSet("Y","N")]
         [String]$ContainerApps = "Y",
 
