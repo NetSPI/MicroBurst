@@ -109,7 +109,7 @@ Function Get-AzPasswords
         [String]$FunctionApps = "Y",
 
         [parameter(Mandatory=$false,
-        HelpMessage="Dump Conatiner App Secrets.")]
+        HelpMessage="Dump Container App Secrets.")]
         [ValidateSet("Y","N")]
         [String]$ContainerApps = "Y",
 
@@ -654,7 +654,7 @@ Function Get-AzPasswords
             #Need to fetch via the REST endpoint to check if there's an identity
             $mgmtToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
             $accountDetails = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
-            if($accountDetails.identity.type -eq "systemassigned"){
+            if($accountDetails.identity.type -match "systemassigned"){
                 
                 $dumpMI = $true
                 $dumpMiJobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
