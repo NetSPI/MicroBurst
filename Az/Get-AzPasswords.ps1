@@ -122,7 +122,12 @@ Function Get-AzPasswords
         HelpMessage="Dump Service Bus Namespace keys.")]
         [ValidateSet("Y","N")]
         [String]$ServiceBus = "Y",
-        
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump App Configuration Access keys.")]
+        [ValidateSet("Y","N")]
+        [String]$AppConfiguration = "Y",
+                
         [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
         [ValidateSet("Y","N")]
@@ -158,7 +163,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration}
         break
     }
 
@@ -1159,6 +1164,20 @@ Function Get-AzPasswords
             # Add the Secrets to the output table
             $TempTblCreds.Rows.Add("Service Bus Namespace Key",$tempNamespace.Name,-join($SBkeys.KeyName," - Primary Key"),$SBkeys.PrimaryKey,$SBkeys.PrimaryConnectionString,"N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
             $TempTblCreds.Rows.Add("Service Bus Namespace Key",$tempNamespace.Name,-join($SBkeys.KeyName," - Secondary Key"),$SBkeys.SecondaryKey,$SBkeys.SecondaryConnectionString,"N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+            }
+        }
+    }
+
+    # App Configuration Keys Section
+    if ($AppConfiguration){
+        $configStores = Get-AzAppConfigurationStore
+        $configStores | ForEach-Object {
+            $configRG = ($_.Id).Split('/')[4]
+            $AppConfigKeys = Get-AzAppConfigurationStoreKey -Name $_.Name -ResourceGroupName $configRG
+            $AppConfigName = $_.Name
+            $AppConfigKeys | ForEach-Object{
+                # Add the Secrets to the output table
+                $TempTblCreds.Rows.Add("App Configuration Access Key",-join($AppConfigName,"-",$_.Name),"Connection String",$_.ConnectionString,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
             }
         }
     }
