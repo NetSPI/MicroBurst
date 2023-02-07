@@ -1,4 +1,4 @@
-﻿<#
+<#
     File: Get-AzKeyVaultsAutomation.ps1
     Author: Karl Fosaaen (@kfosaaen), NetSPI - 2020
     Description: PowerShell function for dumping Azure Key Vault Keys and Secrets via Automation Accounts.
@@ -68,7 +68,7 @@ Function Get-AzKeyVaultsAutomation
     $LoginStatus = Get-AzContext
     $accountName = $LoginStatus.Account
     if ($LoginStatus.Account -eq $null){Write-Warning "No active login. Prompting for login." 
-        try {Login-AzAccount -ErrorAction Stop}
+        try {Connect-AzAccount -ErrorAction Stop}
         catch{Write-Warning "Login process failed."}
         }
     else{}

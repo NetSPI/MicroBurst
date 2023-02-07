@@ -1,4 +1,4 @@
-﻿<#
+<#
     File: Get-AzureDomainInfo.ps1
     Author: Karl Fosaaen (@kfosaaen), NetSPI - 2018
     Description: PowerShell functions for enumerating information from Azure domains.
@@ -145,12 +145,12 @@ Function Get-AzureDomainInfo
 
     if ($LoginBypass -eq "N"){
         # Check to see if we're logged in with AzureRM
-        $LoginStatus = Get-AzureRmContext
+        $LoginStatus = Get-AzContext
         if ($LoginStatus.Account -eq $null){Write-Warning "No active AzureRM login. Prompting for login." 
-            try {Login-AzureRmAccount -ErrorAction Stop | Out-Null}
+            try {Login-AzAccount -ErrorAction Stop | Out-Null}
             catch{Write-Warning "Login process failed.";break}
             }
-        else{$AZRMContext = Get-AzureRmContext; $AZRMAccount = $AZRMContext.Account;Write-Verbose "Currently logged in via AzureRM as $AZRMAccount"; Write-Verbose 'Use Login-AzureRmAccount to change your user'}
+        else{$AZRMContext = Get-AzContext; $AZRMAccount = $AZRMContext.Account;Write-Verbose "Currently logged in via AzureRM as $AZRMAccount"; Write-Verbose 'Use Login-AzureRmAccount to change your user'}
     }
 
     # Subscription name is required, list sub names in gridview if one is not provided
@@ -158,7 +158,7 @@ Function Get-AzureDomainInfo
     else{
 
         # List subscriptions, pipe out to gridview selection
-        $Subscriptions = Get-AzureRmSubscription -WarningAction SilentlyContinue
+        $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
 
         if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
@@ -166,7 +166,7 @@ Function Get-AzureDomainInfo
         Write-Verbose "Dumping information for Selected Subscriptions..."
 
         # Recursively iterate through the selected subscriptions and pass along the parameters
-        Foreach ($sub in $subChoice){$subName = $sub.Name;Write-Verbose "Dumping information for the '$subName' Subscription..."; Select-AzureRMSubscription -Subscription $subName | Out-Null; Get-AzureDomainInfo -Subscription $sub.Name -ResourceGroup $ResourceGroup -LoginBypass Y -folder $folder -Users $Users -Groups $Groups -StorageAccounts $StorageAccounts -Resources $Resources -VMs $VMs -NetworkInfo $NetworkInfo -RBAC $RBAC}
+        Foreach ($sub in $subChoice){$subName = $sub.Name;Write-Verbose "Dumping information for the '$subName' Subscription..."; Select-AzSubscription -Subscription $subName | Out-Null; Get-AzureDomainInfo -Subscription $sub.Name -ResourceGroup $ResourceGroup -LoginBypass Y -folder $folder -Users $Users -Groups $Groups -StorageAccounts $StorageAccounts -Resources $Resources -VMs $VMs -NetworkInfo $NetworkInfo -RBAC $RBAC}
         break
 
     }
@@ -186,12 +186,12 @@ Function Get-AzureDomainInfo
     $folder = -join ($folder, "\", $Subscription)
     
     # Get TenantId
-    $tenantID = Get-AzureRmTenant | select TenantId
+    $tenantID = Get-AzTenant | select TenantId
 
     # Get/Write Users for each domain
     if ($Users -eq "Y"){
         Write-Verbose "Getting Domain Users..."
-        $userLists= Get-AzureRmADUser 
+        $userLists= Get-AzADUser 
         $userLists | Export-Csv -NoTypeInformation -LiteralPath $folder"\Users.CSV"
         $userCount = $userLists.Count
         Write-Verbose "`t$userCount Domain Users were found."
@@ -206,7 +206,7 @@ Function Get-AzureDomainInfo
         else{New-Item -ItemType Directory $folder"\Groups" | Out-Null}
 
         # Gather info to variable
-        $groupLists=Get-AzureRmADGroup
+        $groupLists=Get-AzADGroup
         $groupCount = $groupLists.Count
         Write-Verbose "`t$groupCount Domain Groups were found."
         Write-Verbose "Getting Domain Users for each group..."
@@ -215,7 +215,7 @@ Function Get-AzureDomainInfo
         $groupLists | Export-Csv -NoTypeInformation -LiteralPath $folder"\Groups.CSV"
 
         # Iterate through each group, and export users
-        $groupLists | ForEach-Object {$groupName=$_.DisplayName; Get-AzureRmADGroupMember -GroupObjectId $_.Id | Select-Object @{ Label = "Group Name"; Expression={$groupName}}, DisplayName | Export-Csv -NoTypeInformation -LiteralPath $folder"\Groups\"$groupName"_Users.CSV"}
+        $groupLists | ForEach-Object {$groupName=$_.DisplayName; Get-AzADGroupMember -GroupObjectId $_.Id | Select-Object @{ Label = "Group Name"; Expression={$groupName}}, DisplayName | Export-Csv -NoTypeInformation -LiteralPath $folder"\Groups\"$groupName"_Users.CSV"}
         Write-Verbose "`tDomain Group Users were enumerated for $groupCount groups."
     }
 
@@ -228,12 +228,12 @@ Function Get-AzureDomainInfo
         if($ResourceGroup){
             foreach($rg in $ResourceGroup){
                 # Gather info to variable
-                $storageAccountLists += Get-AzureRmStorageAccount -ResourceGroupName $rg | select StorageAccountName,ResourceGroupName 
+                $storageAccountLists += Get-AzStorageAccount -ResourceGroupName $rg | select StorageAccountName,ResourceGroupName 
             }
         }
         else{
             # Gather info to variable
-            $storageAccountLists = Get-AzureRmStorageAccount | select StorageAccountName,ResourceGroupName 
+            $storageAccountLists = Get-AzStorageAccount | select StorageAccountName,ResourceGroupName 
         }
 
         if ($storageAccountLists){
@@ -251,7 +251,7 @@ Function Get-AzureDomainInfo
                 # Try to Set Context, Write-Verbose if you don't have the rights
                 Try{
                     
-                    Set-AzureRmCurrentStorageAccount –ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.StorageAccountName -ErrorAction Stop | Out-Null
+                    Set-AzCurrentStorageAccount �ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.StorageAccountName -ErrorAction Stop | Out-Null
                     
                                         
                     $strgName = $storageAccount.StorageAccountName
@@ -261,21 +261,21 @@ Function Get-AzureDomainInfo
                     else{New-Item -ItemType Directory $folder"\Files\"$strgName | Out-Null}
 
                     # List Containers and Files and Export to CSV
-                    $containers = Get-AzureStorageContainer | select Name
+                    $containers = Get-AzStorageContainer | select Name
         
                     foreach ($container in $containers){
                         $containerName = $container.Name
                         Write-Verbose "`t`tListing files for the $containerName container"
                         $pathName = "\Files\"+$strgName+"\Blob_Files_"+$container.Name
-                        $blobs = Get-AzureStorageBlob -Container $container.Name 
+                        $blobs = Get-AzStorageBlob -Container $container.Name 
                         $blobs | ForEach-Object {$_.ICloudBlob | select @{name="Uri"; expression={$_.Uri}},@{name="StorageUri"; expression={$_.StorageUri}},@{name="SnapshotTime"; expression={$_.SnapshotTime}},@{name="IsSnapshot"; expression={$_.IsSnapshot}},@{name="IsDeleted"; expression={$_.IsDeleted}},@{name="SnapshotQualifiedUri"; expression={$_.SnapshotQualifiedUri}},@{name="SnapshotQualifiedStorageUri"; expression={$_.SnapshotQualifiedStorageUri}},@{name="Name"; expression={$_.Name}},@{name="BlobType"; expression={$_.BlobType}}} | Export-Csv -NoTypeInformation -LiteralPath $folder$pathName".CSV"
             
                         # Check if the container is public, write to PublicFileURLs.txt
-                        $publicStatus = Get-AzureStorageContainerAcl $container.Name | select PublicAccess
+                        $publicStatus = Get-AzStorageContainerAcl $container.Name | select PublicAccess
                         if (($publicStatus.PublicAccess -eq "Blob")){
 
                             #Write public file URL to list
-                            $blobName = Get-AzureStorageBlob -Container $container.Name | select Name
+                            $blobName = Get-AzStorageBlob -Container $container.Name | select Name
                         
                             $pubfileName = $blobName.Name 
                             Write-Verbose "`t`t`tPublic File Found - $pubfileName"
@@ -287,7 +287,7 @@ Function Get-AzureDomainInfo
                         if ($publicStatus.PublicAccess -eq "Container"){
                             Write-Verbose "`t`t`t$containerName Container is Public" 
                             #Write public container URL to list
-                            $blobName = Get-AzureStorageBlob -Container $container.Name | select Name
+                            $blobName = Get-AzStorageBlob -Container $container.Name | select Name
                             $blobUrl = "https://$StorageAccountName.blob.core.windows.net/$containerName/"
                             $blobUrl >> $folder"\Files\PublicContainers.txt"
                             # Write out available files within "Container" containers
@@ -301,13 +301,13 @@ Function Get-AzureDomainInfo
 
                     #Go through each File Service endpoint
                     Try{
-                        $AZFileShares = Get-AzureStorageShare -ErrorAction Stop | select Name
+                        $AZFileShares = Get-AzStorageShare -ErrorAction Stop | select Name
                         if($AZFileShares.Length -gt 0){
                             Write-Verbose "`tListing out File Service files for the $StorageAccountName storage account..."
                             foreach ($share in $AZFileShares) {
                                 $shareName = $share.Name
                                 Write-Verbose "`tListing files for the $shareName share"
-                                Get-AzureStorageFile -ShareName $shareName | select Name | Export-Csv -NoTypeInformation -LiteralPath $folder"\Files\"$strgName"\File_Service_Files-"$shareName".CSV" -Append
+                                Get-AzStorageFile -ShareName $shareName | select Name | Export-Csv -NoTypeInformation -LiteralPath $folder"\Files\"$strgName"\File_Service_Files-"$shareName".CSV" -Append
                                 }
                             }
                         else{Write-Verbose "`tNo available File Service files for the $StorageAccountName storage account..."}
@@ -321,7 +321,7 @@ Function Get-AzureDomainInfo
 
                     #Go through each Storage Table endpoint
                     Try{            
-                        $tableList = Get-AzureStorageTable -ErrorAction Stop 
+                        $tableList = Get-AzStorageTable -ErrorAction Stop 
                         if ($tableList.Length -gt 0){
                             $tableList | Export-Csv -NoTypeInformation -LiteralPath $folder"\Files\"$strgName"\Data_Tables.CSV"
                             Write-Verbose "`tListing out Data Tables for the $StorageAccountName storage account..."
@@ -350,21 +350,21 @@ Function Get-AzureDomainInfo
         else{New-Item -ItemType Directory $folder"\Resources\" | Out-Null}
 
         # Get/Write AD Authentication Endpoints
-        $ADApps = Get-AzureRmADApplication
+        $ADApps = Get-AzADApplication
         $ADApps | select DisplayName,@{name="IdentifierUris";expression={$_.IdentifierUris}},HomePage,Type,@{name="ReplyUrl";expression={$_.ReplyUrls}} | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\Domain_Auth_EndPoints.CSV"
         $ADAppsCount = $ADApps.Count
         Write-Verbose "`t$ADAppsCount Domain Authentication endpoints were enumerated."
 
         # Get/Write Service Principals
         Write-Verbose "Getting Domain Service Principals..."
-        $principals = Get-AzureRmADServicePrincipal | select DisplayName,ApplicationId,Id,Type
+        $principals = Get-AzADServicePrincipal | select DisplayName,ApplicationId,Id,Type
         $principals | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\Domain_SPNs.CSV"
         $principalCount = $principals.Count
         Write-Verbose "`t$principalCount service principals were enumerated."
     
         # Get/Write Available resource groups
         Write-Verbose "Getting Azure Resource Groups..."
-        $resourceGroups = Get-AzureRmResourceGroup
+        $resourceGroups = Get-AzResourceGroup
         if($resourceGroups){
             $resourceGroups | select ResourceGroupName,Location,ProvisioningState,ResourceId | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\Resource_Groups.CSV"
             $resourceGroupsCount = $resourceGroups.Count
@@ -374,28 +374,28 @@ Function Get-AzureDomainInfo
 
         # Get/Write Available resources
         Write-Verbose "Getting Azure Resources..."
-        $resourceLists = Get-AzureRmResource
+        $resourceLists = Get-AzResource
         $resourceLists | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\All_Resources.CSV"
         $resourceCount = $resourceLists.Count
         Write-Verbose "`t$resourceCount Resources were enumerated."
 
         # Get/Write Available AzureSQL DBs
         Write-Verbose "Getting AzureSQL Resources..."
-        $azureSQLServers = Get-AzureRmResource | where {$_.ResourceType -Like "Microsoft.Sql/servers"}
+        $azureSQLServers = Get-AzResource | where {$_.ResourceType -Like "Microsoft.Sql/servers"}
         $azureSQLServersCount = @($azureSQLServers).Count
         $azureSQLDatabasesCount = 0
 
         # Write Databases (per server) out to file
         foreach ($sqlServer in $azureSQLServers){
             $SQLPath = '\Resources\'+$sqlServer.Name
-            $azureSQLDatabases = Get-AzureRmSqlDatabaseExpanded -ServerName $sqlServer.Name -ResourceGroupName $sqlServer.ResourceGroupName 
+            $azureSQLDatabases = Get-AzSqlDatabaseExpanded -ServerName $sqlServer.Name -ResourceGroupName $sqlServer.ResourceGroupName 
             $azureSQLDatabasesCount += $azureSQLDatabases.Count
             $azureSQLDatabases | Export-Csv -NoTypeInformation -LiteralPath $folder$SQLPath'_SQL_Databases.CSV'
 
-            Get-AzureRmSqlServerFirewallRule -ServerName $sqlServer.Name -ResourceGroupName $sqlServer.ResourceGroupName | Export-Csv -NoTypeInformation -LiteralPath $folder$SQLPath"_SQL_FW_Rules.csv"
+            Get-AzSqlServerFirewallRule -ServerName $sqlServer.Name -ResourceGroupName $sqlServer.ResourceGroupName | Export-Csv -NoTypeInformation -LiteralPath $folder$SQLPath"_SQL_FW_Rules.csv"
 
             # List AzureAD admins for each
-            $adminSQL = $azureSQLServers | ForEach-Object { Get-AzureRmSqlServerActiveDirectoryAdministrator -ServerName $_.Name -ResourceGroupName $_.ResourceGroupName}
+            $adminSQL = $azureSQLServers | ForEach-Object { Get-AzSqlServerActiveDirectoryAdministrator -ServerName $_.Name -ResourceGroupName $_.ResourceGroupName}
             $adminSQL | Export-Csv -NoTypeInformation -LiteralPath $folder$SQLPath"_SQL_Admins.csv"
 
             }
@@ -411,10 +411,10 @@ Function Get-AzureDomainInfo
         # Get App Services 
         if($ResourceGroup){
             foreach($rg in $ResourceGroup){
-                $appServs += Get-AzureRmWebApp -ResourceGroupName $rg
+                $appServs += Get-AzWebApp -ResourceGroupName $rg
             }
         }
-        else{$appServs = Get-AzureRmWebApp}
+        else{$appServs = Get-AzWebApp}
         $appServsCount = $appServs.Count
 
         $appServs | select State,@{name="HostNames";expression={$_.HostNames}},RepositorySiteName,UsageState,Enabled,@{name="EnabledHostNames";expression={$_.EnabledHostNames}},AvailabilityState,@{name="HostNameSslStates";expression={$_.HostNameSslStates}},ServerFarmId,Reserved,LastModifiedTimeUtc,SiteConfig,TrafficManagerHostNames,ScmSiteAlsoStopped,TargetSwapSlot,HostingEnvironmentProfile,ClientAffinityEnabled,ClientCertEnabled,HostNamesDisabled,OutboundIpAddresses,PossibleOutboundIpAddresses,ContainerSize,DailyMemoryTimeQuota,SuspendedTill,MaxNumberOfWorkers,CloningInfo,SnapshotInfo,ResourceGroup,IsDefaultContainer,DefaultHostName,SlotSwapStatus,HttpsOnly,Identity,Id,Name,Kind,Location,Type,Tags | Export-Csv -NoTypeInformation -LiteralPath $folder"\Resources\AppServices.CSV"
@@ -423,7 +423,7 @@ Function Get-AzureDomainInfo
 
         # Get list of Disks
         Write-Verbose "Getting Azure Disks..."
-        $disks = Get-AzureRmDisk
+        $disks = Get-AzDisk
         $disksCount = $disks.Count
         Write-Verbose "`t$disksCount Disks were enumerated."
         # Write Disk info to file
@@ -432,13 +432,13 @@ Function Get-AzureDomainInfo
         
         # Get Deployments and Parameters
         Write-Verbose "Getting Azure Deployments and Parameters..."
-        Get-AzureRmResourceGroup | Get-AzureRmResourceGroupDeployment |  Out-File -LiteralPath $folder"\Resources\Deployments.txt"
+        Get-AzResourceGroup | Get-AzResourceGroupDeployment |  Out-File -LiteralPath $folder"\Resources\Deployments.txt"
     }
 
     if ($VMs -eq "Y"){
         Write-Verbose "Getting Virtual Machines..."
 
-        $VMList = Get-AzureRmVM
+        $VMList = Get-AzVM
         $VMCount = $VMList.count
 
         # Create folder for VM Info for cleaner output
@@ -451,7 +451,7 @@ Function Get-AzureDomainInfo
 
         Write-Verbose "Getting Virtual Machine Scale Sets..."
 
-        $scaleSets = Get-AzureRmVmss
+        $scaleSets = Get-AzVmss
  
         # Set Up Data Table
         $vmssDT = New-Object System.Data.DataTable("vmssVMs")
@@ -459,17 +459,17 @@ Function Get-AzureDomainInfo
         foreach ($col in $columns) {$vmssDT.Columns.Add($col) | Out-Null}
         $vmssCount = $scaleSets.Count
         foreach($sSet in $scaleSets){
-            $instanceIds = Get-AzureRmVmssVM -ResourceGroupName $sSet.ResourceGroupName -VMScaleSetName $sSet.Name 
+            $instanceIds = Get-AzVmssVM -ResourceGroupName $sSet.ResourceGroupName -VMScaleSetName $sSet.Name 
             foreach($sInstance in $instanceIds){
 
-                $vmssVMs = Get-AzureRmVmssVM -ResourceGroupName $sInstance.ResourceGroupName -VMScaleSetName $sSet.Name -InstanceId $sInstance.InstanceId
+                $vmssVMs = Get-AzVmssVM -ResourceGroupName $sInstance.ResourceGroupName -VMScaleSetName $sSet.Name -InstanceId $sInstance.InstanceId
                 $nicName = ($vmssVMs.NetworkProfile.NetworkInterfaces[0].Id).Split('/')[-1]
 
                 # Correct the resource name
                 $resourceName = $sSet.Name + "/" + $vmssVMs.InstanceId + "/" + $nicName
                 
                 # Get resource interface config
-                $target = Get-AzureRmResource -ResourceGroupName $sInstance.ResourceGroupName -ResourceType Microsoft.Compute/virtualMachineScaleSets/virtualMachines/networkInterfaces -ResourceName $resourceName -ApiVersion 2017-03-30
+                $target = Get-AzResource -ResourceGroupName $sInstance.ResourceGroupName -ResourceType Microsoft.Compute/virtualMachineScaleSets/virtualMachines/networkInterfaces -Name $resourceName -ApiVersion 2017-03-30
 
                 # Write the Data Table to the file
                 $vmssDT.Rows.Add($vmssVMs.Name,$vmssVMs.OsProfile.ComputerName,$target.Properties.ipConfigurations[0].properties.privateIPAddress,$vmssVMs.OsProfile.AdminUsername,$vmssVMs.OsProfile.AdminPassword,$vmssVMs.OsProfile.Secrets,$vmssVMs.ProvisioningState) | Out-Null
@@ -485,7 +485,7 @@ Function Get-AzureDomainInfo
 
     if($NetworkInfo -eq "Y"){
         Write-Verbose "Getting Network Interfaces..."
-        $NICList = Get-AzureRmNetworkInterface
+        $NICList = Get-AzNetworkInterface
 
         # Create folder for Network Interfaces for cleaner output
         if(Test-Path $folder"\Interfaces"){}
@@ -509,11 +509,11 @@ Function Get-AzureDomainInfo
 
         # Create General NIC List
         Write-Verbose "`tGetting Public IPs for each Network Interface..."
-        $pubIPs = Get-AzureRmPublicIpAddress | select Name,IpAddress,PublicIpAllocationMethod,ResourceGroupName
+        $pubIPs = Get-AzPublicIpAddress | select Name,IpAddress,PublicIpAllocationMethod,ResourceGroupName
         $pubIPs | Export-Csv -NoTypeInformation -LiteralPath $folder"\PublicIPs.csv"
 
         Write-Verbose "Getting Network Security Groups..."
-        $NSGList = Get-AzureRmNetworkSecurityGroup | select Name, ResourceGroupName, Location, SecurityRules, DefaultSecurityRules
+        $NSGList = Get-AzNetworkSecurityGroup | select Name, ResourceGroupName, Location, SecurityRules, DefaultSecurityRules
         $NSGListCount = $NSGList.Count
         Write-Verbose "`t$NSGListCount Network Security Groups were enumerated."
 
@@ -561,12 +561,12 @@ Function Get-AzureDomainInfo
         if(Test-Path $folder"\RBAC"){}
         else{New-Item -ItemType Directory $folder"\RBAC" | Out-Null}
                 
-        $roleAssignment = Get-AzureRmRoleAssignment
+        $roleAssignment = Get-AzRoleAssignment
 
         # List the Owners and list out any users in groups
         $ownersList = $roleAssignment| where RoleDefinitionName -EQ Owner
         $ownerGroups = $ownersList | where ObjectType -EQ group
-        $ownerInherits = foreach ($ownerGroup in $ownerGroups){Get-AzureRmADGroupMember -GroupObjectId $ownerGroup.objectId}
+        $ownerInherits = foreach ($ownerGroup in $ownerGroups){Get-AzADGroupMember -GroupObjectId $ownerGroup.objectId}
         
         # Write results to file
         if ($ownersList) {
@@ -583,7 +583,7 @@ Function Get-AzureDomainInfo
             }
         
         # Get the Roles, write them out
-        $roles = Get-AzureRmRoleDefinition 
+        $roles = Get-AzRoleDefinition 
         if($roles){$roles | select Name,Id,IsCustom,Description | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\Roles.csv"; $rolesCount = $roles.Count; Write-Verbose "`t$rolesCount roles were enumerated."}
 
         # Get the Contributors, write them out
@@ -594,8 +594,8 @@ Function Get-AzureDomainInfo
 
             # Contributors that are Group Members
             $contributors | where ObjectType -EQ Group | ForEach-Object{
-                $contributorGroupMembers = Get-AzureRmADGroupMember -GroupObjectId $_.ObjectId
-                $objDisplayname = (Get-AzureRmADGroup -ObjectId $_.ObjectId).DisplayName
+                $contributorGroupMembers = Get-AzADGroupMember -GroupObjectId $_.ObjectId
+                $objDisplayname = (Get-AzADGroup -ObjectId $_.ObjectId).DisplayName
                 if ($contributorGroupMembers){
                         $contributorGroupMembers | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\"$objDisplayname"_InheritedContributors.csv"
                         $contributorCounts = $contributorGroupMembers.Count
@@ -609,4 +609,5 @@ Function Get-AzureDomainInfo
     
     Write-Verbose "Done with all tasks for the '$Subscription' Subscription.`n"
 }
+
 

@@ -18,14 +18,14 @@ $azureADConnection = Connect-AzureAD -TenantId $servicePrincipalConnection.Tenan
     -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
 
 # Ensures you do not inherit an AzureRMContext in your runbook
-Disable-AzureRmContextAutosave -Scope Process | out-null
+Disable-AzContextAutosave -Scope Process | out-null
 
 # Logging in to Azure RM with Service Principal
-$azureRMConnection = Connect-AzureRmAccount -ServicePrincipal -Tenant $servicePrincipalConnection.TenantID `
+$azureRMConnection = Connect-AzAccount -ServicePrincipal -Tenant $servicePrincipalConnection.TenantID `
     -ApplicationID $servicePrincipalConnection.ApplicationID `
     -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
 
-$AzureContext = Select-AzureRmSubscription -SubscriptionId $servicePrincipalConnection.SubscriptionID
+$AzureContext = Select-AzSubscription -Subscription $servicePrincipalConnection.SubscriptionID
 
 # Setup Password Object
 $PasswordProfile = New-Object -TypeName Microsoft.Open.AzureAD.Model.PasswordProfile
@@ -48,4 +48,5 @@ else{exit;}
 New-AzureADUser -DisplayName $BodyContent.RequestBody.Username -PasswordProfile $PasswordProfile -UserPrincipalName $UPN -AccountEnabled $true -MailNickName $BodyContent.RequestBody.Username
 
 # Add account to Owners Group
-New-AzureRmRoleAssignment -SignInName $UPN -RoleDefinitionName Owner
+New-AzRoleAssignment -SignInName $UPN -RoleDefinitionName Owner
+

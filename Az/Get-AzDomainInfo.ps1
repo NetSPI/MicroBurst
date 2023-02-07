@@ -1,4 +1,4 @@
-﻿<#
+<#
     File: Get-AzDomainInfo.ps1
     Author: Karl Fosaaen (@kfosaaen), NetSPI - 2020
     Description: PowerShell functions for enumerating information from Azure domains.
@@ -137,7 +137,7 @@ Function Get-AzDomainInfo
         # Check to see if we're logged in with Az
         $LoginStatus = Get-AzContext
         if ($LoginStatus.Account -eq $null){Write-Warning "No active Az login. Prompting for login." 
-            try {Login-AzAccount -ErrorAction Stop | Out-Null}
+            try {Connect-AzAccount -ErrorAction Stop | Out-Null}
             catch{Write-Warning "Login process failed.";break}
             }
         else{$AZRMContext = Get-AzContext; $AZRMAccount = $AZRMContext.Account;Write-Verbose "Currently logged in via Az as $AZRMAccount"; Write-Verbose 'Use Login-AzAccount to change your user'}
@@ -264,7 +264,7 @@ Function Get-AzDomainInfo
                             $FileList = (Invoke-WebRequest -uri $uriList -Method Get -Verbose:$False).Content
                                 
                             # Microsoft includes these characters in the response, Thanks...
-                            [xml]$xmlFileList = $FileList -replace 'ï»¿'
+                            [xml]$xmlFileList = $FileList -replace '﻿'
                             $foundURL = ""
                             $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob.Name
 
@@ -286,7 +286,7 @@ Function Get-AzDomainInfo
 
                 # Attempt to list File Shares and Tables - typically requires contributor permissions
                 Try{
-                    Set-AzCurrentStorageAccount –ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.StorageAccountName -ErrorAction Stop | Out-Null
+                    Set-AzCurrentStorageAccount �ResourceGroupName $storageAccount.ResourceGroupName -Name $storageAccount.StorageAccountName -ErrorAction Stop | Out-Null
                     $strgName = $storageAccount.StorageAccountName
 
                     #Go through each File Service endpoint
@@ -719,4 +719,5 @@ Function Get-AzDomainInfo
     
     Write-Verbose "Done with all tasks for the '$Subscription' Subscription.`n"
 }
+
 

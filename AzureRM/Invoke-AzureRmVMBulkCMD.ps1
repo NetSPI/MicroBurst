@@ -1,4 +1,4 @@
-﻿<#
+<#
     File: Invoke-AzureRmVMBulkCMD.ps1
     Author: Karl Fosaaen (@kfosaaen), NetSPI - 2018
     Description: PowerShell function for running PowerShell scripts against multiple Azure VMs.
@@ -83,9 +83,9 @@ Function Invoke-AzureRmVMBulkCMD
     # If Subscription, then grab all the VMs in each sub
     if ($Subscription){
         foreach ($sub in $Subscription){
-            Select-AzureRmSubscription -SubscriptionName $sub | Out-Null
+            Select-AzSubscription -Subscription $sub | Out-Null
             # Get a list of the running VMs for the Subscription, run the script on each one
-            $vms += Get-AzureRmVM -Status | where {$_.PowerState -EQ "VM running"}
+            $vms += Get-AzVM -Status | where {$_.PowerState -EQ "VM running"}
             $VMCount = $vms.Count
             Write-Verbose "Executing $Script against $VMCount VMs in the $sub Subscription"
         }
@@ -96,7 +96,7 @@ Function Invoke-AzureRmVMBulkCMD
         $vms = $null
         # Iterate the RG list and add the VMs to the array
         foreach($rg in $ResourceGroupName){
-            $vms = Get-AzureRmVM -Status -ResourceGroupName $rg | where {$_.PowerState -EQ "VM running"}
+            $vms = Get-AzVM -Status -ResourceGroupName $rg | where {$_.PowerState -EQ "VM running"}
             $VMCount = $vms.Count
             Write-Verbose "Executing $Script against $VMCount VMs in the $rg Resource Group"
         }
@@ -107,7 +107,7 @@ Function Invoke-AzureRmVMBulkCMD
         $vms = $null
         # Iterate the name list and add the VMs (that are running) to the array
         foreach($listName in $Name){
-            $vms += Get-AzureRmVM -Status | where Name -EQ $listName | where {$_.PowerState -EQ "VM running"}
+            $vms += Get-AzVM -Status | where Name -EQ $listName | where {$_.PowerState -EQ "VM running"}
         }
         $VMCount = $vms.Count
         Write-Verbose "Executing $Script against $VMCount VMs"
@@ -116,8 +116,8 @@ Function Invoke-AzureRmVMBulkCMD
     # If no RG or Names, then get all VMs for the current Sub
     if (($ResourceGroupName -eq $null) -and ($Name -eq $null)){
         # Get a list of the running VMs for the Subscription, run the script on each one
-        $vms = Get-AzureRmVM -Status | where {$_.PowerState -EQ "VM running"}
-        $subName = (Get-AzureRmSubscription -SubscriptionId ((Get-AzureRmContext).Subscription.Id)).Name
+        $vms = Get-AzVM -Status | where {$_.PowerState -EQ "VM running"}
+        $subName = (Get-AzSubscription -SubscriptionId ((Get-AzContext).Subscription.Id)).Name
         $VMCount = $vms.Count
         Write-Host "Executing $Script against all ($VMCount) VMs in the $subName Subscription"
         $confirmation = Read-Host "Are you Sure You Want To Proceed: (Y/n)"
@@ -135,16 +135,16 @@ Function Invoke-AzureRmVMBulkCMD
             # Measure Execution Time
             $commandTime = Measure-Command {
                 # Get IP Information for better host tracking
-                $NICid = Get-AzureRmNetworkInterface | select Name,VirtualMachine -ExpandProperty VirtualMachine | where Id -EQ $vm.Id
-                $VMInterface = Get-AzureRmNetworkInterface -ResourceGroupName $vm.ResourceGroupName -Name $NICid.Name
+                $NICid = Get-AzNetworkInterface | select Name,VirtualMachine -ExpandProperty VirtualMachine | where Id -EQ $vm.Id
+                $VMInterface = Get-AzNetworkInterface -ResourceGroupName $vm.ResourceGroupName -Name $NICid.Name
                 $privIP = $VMInterface.IpConfigurations[0].PrivateIpAddress
-                $pubIP = (Get-AzureRmPublicIpAddress | where Id -EQ $VMInterface.IpConfigurations[0].PublicIpAddress.Id | select IpAddress).IpAddress
+                $pubIP = (Get-AzPublicIpAddress | where Id -EQ $VMInterface.IpConfigurations[0].PublicIpAddress.Id | select IpAddress).IpAddress
 
                 # Run the PS1 file
                 $VMName = $vm.Name
                 Write-Verbose "Running $Script on the $VMName - ($privIP : $pubIP) virtual machine ($VMcounter of $VMCount)"
                 Try{
-                    $scriptOutput = Invoke-AzureRmVMRunCommand -ResourceGroupName $vm.ResourceGroupName -VMName $VMName -CommandId RunPowerShellScript -ScriptPath $Script -ErrorAction SilentlyContinue
+                    $scriptOutput = Invoke-AzVMRunCommand -ResourceGroupName $vm.ResourceGroupName -VMName $VMName -CommandId RunPowerShellScript -ScriptPath $Script -ErrorAction SilentlyContinue
 
                     #write verbose the return status and write the output from the script
                     $scriptStatus = $scriptOutput.Status

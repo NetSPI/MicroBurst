@@ -1,22 +1,22 @@
-﻿$ErrorActionPreference = "SilentlyContinue"
+$ErrorActionPreference = "SilentlyContinue"
 
 # Start RunAs Process
 $connectionName = "AzureRunAsConnection"
 $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName
     
 # Connect AzureRM
-Connect-AzureRmAccount -ServicePrincipal -Tenant $servicePrincipalConnection.TenantId -ApplicationId $servicePrincipalConnection.ApplicationID -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint | out-null
+Connect-AzAccount -ServicePrincipal -Tenant $servicePrincipalConnection.TenantId -ApplicationId $servicePrincipalConnection.ApplicationID -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint | out-null
     
 # Try to read KeyVaults
-$vaults = Get-AzureRmKeyVault
+$vaults = Get-AzKeyVault
 foreach ($vault in $vaults){
     $vaultName = $vault.VaultName
     try{
-        $keys = Get-AzureKeyVaultKey -VaultName $vault.VaultName -ErrorAction Stop
+        $keys = Get-AzKeyVaultKey -VaultName $vault.VaultName -ErrorAction Stop
         # Dump Keys
         foreach ($key in $keys){
             $keyname = $key.Name
-            $keyValue = Get-AzureKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
+            $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
             # Write out keys - format Vault:Type:Type2:Name:Value
             Write-Output "$($vaultName)`tKEY`t$($keyValue.Key.Kty)`t$($keyValue.Name)`t$($keyValue.Key)"
         }
@@ -24,11 +24,11 @@ foreach ($vault in $vaults){
     catch{}
 
     # Dump Secrets
-    try{$secrets = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop
+    try{$secrets = Get-AzKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop
         foreach ($secret in $secrets){
             $secretname = $secret.Name
             Try{
-                $secretValue = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -Name $secret.Name -ErrorAction Stop
+                $secretValue = Get-AzKeyVaultSecret -VaultName $vault.VaultName -Name $secret.Name -ErrorAction Stop
                 $secretType = $secretValue.ContentType
                 # Write Out Secrets - format Vault:Type:Type2:Name:Value
                 Write-Output "$($vaultName)`tSECRET`t$($secretType)`t$($secretValue.Name)`t$($secretValue.SecretValueText)"
@@ -55,19 +55,19 @@ if($myCredential -ne $null){
     $ErrorActionPreference = "Stop"
 
     # Try to auth as regular user, not as an SPN, that happened above with the RunAs
-    Try{Connect-AzureRMAccount -Credential $Credential}
+    Try{Connect-AzAccount -Credential $Credential}
     Catch{break}
 
     # Try to read KeyVaults
-    $vaults = Get-AzureRmKeyVault
+    $vaults = Get-AzKeyVault
     foreach ($vault in $vaults){
         $vaultName = $vault.VaultName
         try{
-            $keys = Get-AzureKeyVaultKey -VaultName $vault.VaultName -ErrorAction Stop
+            $keys = Get-AzKeyVaultKey -VaultName $vault.VaultName -ErrorAction Stop
             # Dump Keys
             foreach ($key in $keys){
                 $keyname = $key.Name
-                $keyValue = Get-AzureKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
+                $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
                 # Write out keys - format Vault:Type:Type2:Name:Value
                 Write-Output "$($vaultName)`tKEY`t$($keyValue.Key.Kty)`t$($keyValue.Name)`t$($keyValue.Key)"
             }
@@ -75,11 +75,11 @@ if($myCredential -ne $null){
         catch{}
 
         # Dump Secrets
-        try{$secrets = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop
+        try{$secrets = Get-AzKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop
             foreach ($secret in $secrets){
                 $secretname = $secret.Name
                 Try{
-                    $secretValue = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -Name $secret.Name -ErrorAction Stop
+                    $secretValue = Get-AzKeyVaultSecret -VaultName $vault.VaultName -Name $secret.Name -ErrorAction Stop
                     $secretType = $secretValue.ContentType
                     # Write Out Secrets - format Vault:Type:Type2:Name:Value
                     Write-Output "$($vaultName)`tSECRET`t$($secretType)`t$($secretValue.Name)`t$($secretValue.SecretValueText)"
@@ -90,4 +90,5 @@ if($myCredential -ne $null){
         catch{}
     }    
 }
+
 

