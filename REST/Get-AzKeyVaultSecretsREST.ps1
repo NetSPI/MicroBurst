@@ -63,7 +63,7 @@
         $responseKeys = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/providers/Microsoft.KeyVault/vaults?api-version=2019-09-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)
         
         # Keeping the second method of vault enumeration as a backup option
-        #$responseKeys = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/resources?`$filter=resourceType eq 'Microsoft.KeyVault/vaults'&api-version=2019-09-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)
+        if($null -eq ($responseKeys.value | ConvertFrom-Json)){$responseKeys = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/resources?`$filter=resourceType eq 'Microsoft.KeyVault/vaults'&api-version=2019-09-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)}
         
         if ($responseKeys.value -ne $null){$keyVaults = $responseKeys.value}
         else{$keyVaults = $null}
@@ -79,7 +79,7 @@
                 try{
                     Write-Verbose "`tGetting Secrets for $vaultName"
                     #Instantiate running list that we can add to
-                    $secretsListAll = @()                
+                    $secretsListAll = @()
                     $secretsList = ((Invoke-WebRequest -Uri (-join ('https://',$vault.name,'.vault.azure.net/secrets?api-version=7.0')) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $vaultToken"} -UseBasicParsing).content | ConvertFrom-Json)
                     
                     $secretsListAll += $secretsList.value
