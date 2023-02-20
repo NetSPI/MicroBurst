@@ -365,13 +365,6 @@ Function Get-AzPasswords
 
                     $secretType = $secretValue.ContentType
 
-                    # Write Private Certs to file
-                    if (($ExportCerts -eq "Y") -and ($secretType  -eq "application/x-pkcs12")){
-                            Write-Verbose "`t`t`tWriting certificate for $secretname to $pwd\$secretname.pfx"
-                            $secretBytes = [convert]::FromBase64String(($secretValue.SecretValue| ConvertFrom-SecureString))
-                            [IO.File]::WriteAllBytes("$pwd\$secretname.pfx", $secretBytes)
-                        }
-
                     # Fix implemented from here - https://docs.microsoft.com/en-us/azure/key-vault/secrets/quick-create-powershell
                     $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secretValue.SecretValue)
                     try {
@@ -380,6 +373,14 @@ Function Get-AzPasswords
                     finally {
                        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
                     }
+
+                    # Write Private Certs to file
+                    if (($ExportCerts -eq "Y") -and ($secretType  -eq "application/x-pkcs12")){
+                            Write-Verbose "`t`t`tWriting certificate for $secretname to $pwd\$secretname.pfx"
+                            $secretBytes = [convert]::FromBase64String($secretValueText)
+                            [IO.File]::WriteAllBytes("$pwd\$secretname.pfx", $secretBytes)
+                        }
+
 
                     # Add Secret to the table
                     $TempTblCreds.Rows.Add("Secret",$secretValue.Name,"N/A",$secretValueText,"N/A",$secretValue.Created,$secretValue.Updated,$secretValue.Enabled,$secretValue.ContentType,$vault.VaultName,$subName) | Out-Null
