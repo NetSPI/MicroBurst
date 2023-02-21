@@ -383,9 +383,9 @@ Function Get-AzPasswords
 
                     # Write Private Certs to file
                     if (($ExportCerts -eq "Y") -and ($secretType  -eq "application/x-pkcs12")){
-                            Write-Verbose "`t`t`tWriting certificate for $secretname to $pwd\$secretname.pfx"
+                            Write-Verbose "`t`t`tWriting certificate for $secretname to $pwd/$secretname.pfx"
                             $secretBytes = [convert]::FromBase64String($secretValueText)
-                            [IO.File]::WriteAllBytes("$pwd\$secretname.pfx", $secretBytes)
+                            [IO.File]::WriteAllBytes((Join-Path -Path $PWD -ChildPath "$secretname.pfx"), $secretBytes)
                         }
 
 
