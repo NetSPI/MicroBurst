@@ -127,6 +127,11 @@ Function Get-AzPasswords
         HelpMessage="Dump App Configuration Access keys.")]
         [ValidateSet("Y","N")]
         [String]$AppConfiguration = "Y",
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump Batch Account Access keys.")]
+        [ValidateSet("Y","N")]
+        [String]$BatchAccounts = "Y",
                 
         [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
@@ -163,7 +168,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts}
         break
     }
 
@@ -1187,6 +1192,27 @@ Function Get-AzPasswords
                 # Add the Secrets to the output table
                 $TempTblCreds.Rows.Add("App Configuration Access Key",-join($AppConfigName,"-",$_.Name),"Connection String",$_.ConnectionString,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
             }
+        }
+    }
+
+
+    # Batch Account Access Keys Section
+    if ($BatchAccounts){
+
+        Write-Verbose "Getting List of Azure Batch Accounts"
+
+        #Get list of Batch Accounts
+        $batchAccountList = Get-AzBatchAccount
+
+        $batchAccountList | ForEach-Object{
+            # Get Account Keys
+            Try{
+            $batchKeys = Get-AzBatchAccountKeys -AccountName $_.AccountName
+                # Add the Secrets to the output table
+                $TempTblCreds.Rows.Add("Batch Access Key",$_.AccountName,"Primary",$batchKeys.PrimaryAccountKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                $TempTblCreds.Rows.Add("Batch Access Key",$_.AccountName,"Secondary",$batchKeys.SecondaryAccountKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+            }
+            Catch{Write-Verbose "`tNo ListKeys Permissions on the $($_.AccountName) Batch Account"}
         }
     }
 
