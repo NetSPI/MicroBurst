@@ -168,7 +168,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts -TestPane $TestPane}
         break
     }
 
