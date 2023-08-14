@@ -831,6 +831,9 @@ Function Get-AzPasswords
                                 
                                             # Might be able to delete this line...
                                             if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
+
+                                            # Select only lines containing the protected content (skip eventual debug output)
+                                            $jobOutput = $jobOutput | Where-Object { $_.value -match "-----BEGIN CMS-----" }
         
                                             # Decrypt the output and add it to the table
                                             $cred1 = ($jobOutput[0].value | Unprotect-CmsMessage)
