@@ -63,11 +63,24 @@
         $responseKeys = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/providers/Microsoft.KeyVault/vaults?api-version=2019-09-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)
         
         # Keeping the second method of vault enumeration as a backup option
-        if($null -eq ($responseKeys.value | ConvertFrom-Json)){$responseKeys = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/resources?`$filter=resourceType eq 'Microsoft.KeyVault/vaults'&api-version=2019-09-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)}
+        try{$keycanary = $responseKeys.value | ConvertFrom-Json -ErrorAction Stop}
+        catch{$keycanary = $null}
         
-        if ($responseKeys.value -ne $null){$keyVaults = $responseKeys.value}
-        else{$keyVaults = $null}
-
+        if($null -eq $keycanary){
+            $responseKeys = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/resources?`$filter=resourceType eq 'Microsoft.KeyVault/vaults'&api-version=2019-09-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)
+            if ($responseKeys.value -ne $null){$keyVaults = $responseKeys.value}
+            else{$keyVaults = $null}
+        }
+        
+        # Adjust for multiple vaults
+        if ($responseKeys.nextLink -ne $null){
+            while($responseKeys.nextLink){
+                $keyVaults += $responseKeys.Value
+                $responseKeys = ((Invoke-WebRequest -Uri $responseKeys.nextLink -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json)
+            }
+        }
+        else{}
+        
 
         if($keyVaults -eq $null){Write-Verbose "`tNo Key Vaults enumerated for the $subName Subscription"}
         else{
