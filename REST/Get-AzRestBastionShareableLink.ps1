@@ -24,4 +24,4 @@ function Get-AzRestBastionShareableLink {
     }
 }
 
-Get-AzRestBastionShareableLink
+#Get-AzRestBastionShareableLink
