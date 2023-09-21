@@ -87,14 +87,14 @@ function Invoke-AzVMCommandREST{
             $fullResponse = (Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/resourceGroups/",$resourceGroup,"/providers/Microsoft.Compute/virtualMachines/",$vmName,"/runCommand?api-version=2020-06-01")) -Verbose:$false -ContentType "application/json" -Method POST -Body $commandBody -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing)
     
             # Wait for command to complete
-            while ((Invoke-WebRequest -Verbose:$false -Uri $fullResponse.Headers.Location -Headers @{ Authorization ="Bearer $((Get-AzAccessToken).Token)"} -UseBasicParsing).RawContentLength -lt 1){
+            while ((Invoke-WebRequest -Verbose:$false -Uri $fullResponse.Headers.Location -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).RawContentLength -lt 1){
         
                 Write-Output "`tWaiting for the command to complete, sleeping 5 seconds..."
                 Start-Sleep 5
             
             }
 
-            (Invoke-WebRequest -Verbose:$false -Uri $fullResponse.Headers.Location -Headers @{ Authorization ="Bearer $((Get-AzAccessToken).Token)"} -UseBasicParsing).Content | ConvertFrom-Json | ForEach-Object{
+            (Invoke-WebRequest -Verbose:$false -Uri $fullResponse.Headers.Location -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content | ConvertFrom-Json | ForEach-Object{
                     if(($_.value.message).length -gt 0){Write-Host "Command Output: $($_.value.message)"}
                 }
         }
