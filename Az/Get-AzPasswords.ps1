@@ -1188,7 +1188,8 @@ Function Get-AzPasswords
     }
 
     # App Configuration Keys Section
-    if ($AppConfiguration){
+    if ($AppConfiguration -eq 'Y'){
+        Write-Verbose "Getting List of App Configuration Stores"
         $configStores = Get-AzAppConfigurationStore
         $configStores | ForEach-Object {
             $configRG = ($_.Id).Split('/')[4]
@@ -1203,7 +1204,7 @@ Function Get-AzPasswords
 
 
     # Batch Account Access Keys Section
-    if ($BatchAccounts){
+    if ($BatchAccounts -eq 'Y'){
 
         Write-Verbose "Getting List of Azure Batch Accounts"
 
