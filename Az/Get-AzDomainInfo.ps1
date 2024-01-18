@@ -11,13 +11,6 @@
 #       Add a "Findings" file that lists out the specific bad config items
 
 
-# Check if the Az Module is installed and imported
-if(!(Get-Module Az)){
-    try{Import-Module Az -ErrorAction Stop}
-    catch{Install-Module -Name Az -Confirm}
-    }
-
-
 Function Get-AzDomainInfo
 {
 <#

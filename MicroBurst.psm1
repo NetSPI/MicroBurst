@@ -1,5 +1,8 @@
 ﻿# Test to see if each module is installed, load scripts as applicable
 
+$prefBackup = $WarningPreference
+$global:WarningPreference = 'SilentlyContinue'
+
 # Az
 if(!(Get-Module Az)){
     try{
@@ -45,3 +48,5 @@ if(!(Get-Module msonline)){
 
 #Import-Module $PSScriptRoot\Misc\MicroBurst-Misc.psm1
 Import-Module $PSScriptRoot\REST\MicroBurst-AzureREST.psm1
+
+$global:WarningPreference = $prefBackup
