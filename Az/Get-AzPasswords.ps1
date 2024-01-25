@@ -1112,7 +1112,7 @@ Function Get-AzPasswords
         $rgList | ForEach-Object {
 
             # Get list of Container Apps
-            $CAListURL = "https://management.azure.com/subscriptions/$subID/resourceGroups/$($_.name)/providers/Microsoft.App/containerApps/?api-version=2022-01-01-preview"
+            $CAListURL = "https://management.azure.com/subscriptions/$subID/resourceGroups/$($_.name)/providers/Microsoft.App/containerApps/?api-version=2022-03-01"
             $CAList = ((Invoke-WebRequest -UseBasicParsing -Uri $CAListURL -Headers @{ Authorization ="Bearer $CAmanagementToken"} -Method GET -Verbose:$false).Content | ConvertFrom-Json).value
 
             if ($CAList -ne $null){                
@@ -1120,7 +1120,7 @@ Function Get-AzPasswords
                 $CAList | ForEach-Object{
                     $CAName = ($_.id).split("/")[-1]
                     Write-Verbose "`tGetting Container App Secrets from the $CAName application"
-                    $secretsURL = "https://management.azure.com$($_.id)/listSecrets?api-version=2022-01-01-preview"
+                    $secretsURL = "https://management.azure.com$($_.id)/listSecrets?api-version=2022-03-01"
                     $CASecrets = ((Invoke-WebRequest -UseBasicParsing -Uri $secretsURL -Headers @{ Authorization ="Bearer $CAmanagementToken"; 'Content-Type' = "application/json"} -Method POST -Verbose:$false).Content | ConvertFrom-Json).value
 
                     # Add the Secrets to the output table
