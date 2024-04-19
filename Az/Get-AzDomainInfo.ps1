@@ -189,7 +189,7 @@ Function Get-AzDomainInfo
         else{New-Item -ItemType Directory $folder"\Groups" | Out-Null}
 
         # Gather info to variable
-        $groupLists=Get-AzADGroup
+        $groupLists=Get-AzADGroup -WarningAction:SilentlyContinue
         $groupCount = $groupLists.Count
         Write-Verbose "`t$groupCount Domain Groups were found."
         Write-Verbose "Getting Domain Users for each group..."
@@ -205,7 +205,7 @@ Function Get-AzDomainInfo
             $charlist = [string[]][System.IO.Path]::GetInvalidFileNameChars()
             foreach ($char in $charlist){$groupName = $groupName.replace($char,'.')}
 
-            Get-AzADGroupMember -GroupObjectId $_.Id | Select-Object @{ Label = "Group Name"; Expression={$groupName}}, DisplayName, UserPrincipalName, Id | Export-Csv -NoTypeInformation -LiteralPath $folder"\Groups\"$groupName"_Users.CSV"
+            Get-AzADGroupMember -GroupObjectId $_.Id -WarningAction:SilentlyContinue | Select-Object @{ Label = "Group Name"; Expression={$groupName}}, DisplayName, UserPrincipalName, Id | Export-Csv -NoTypeInformation -LiteralPath $folder"\Groups\"$groupName"_Users.CSV"
             }
         Write-Verbose "`tDomain Group Users were enumerated for $groupCount groups."
     }
