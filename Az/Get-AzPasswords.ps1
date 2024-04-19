@@ -501,13 +501,16 @@ Function Get-AzPasswords
         Write-Verbose "Getting List of Azure Container Registries..."
         $registries = Get-AzContainerRegistry
         $registries | ForEach-Object {
-            if ($_.AdminUserEnabled -eq 'True'){
-                
+           if ($_.AdminUserEnabled -eq 'True'){
+                try{
                 $loginServer = $_.LoginServer
+                $name = $_.Name
                 Write-Verbose "`tGetting the Admin User password for $loginServer"
-                $ACRpasswords = Get-AzContainerRegistryCredential -ResourceGroupName $_.ResourceGroupName -Name $_.Name
+                $ACRpasswords = Get-AzContainerRegistryCredential -ResourceGroupName $_.ResourceGroupName -Name $name
                 $TempTblCreds.Rows.Add("ACR-AdminUser",$_.LoginServer,$ACRpasswords.Username,$ACRpasswords.Password,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
                 $TempTblCreds.Rows.Add("ACR-AdminUser",$_.LoginServer,$ACRpasswords.Username,$ACRpasswords.Password2,"N/A","N/A","N/A","N/A","Password","N/A",$subName) | Out-Null
+                }
+                catch{Write-Verbose "`tuser does not have authorization to perform action Get-AzContainerRegistryCredential for container registry $name"}
             }
         }
     }
