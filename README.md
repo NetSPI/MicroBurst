@@ -76,6 +76,7 @@ PS C:> Get-Help Invoke-EnumerateAzureSubDomains
 * <a href="https://blog.netspi.com/azure-privilege-escalation-using-managed-identities/">Azure Privilege Escalation Using Managed Identities</a>
 * <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/azure-persistence-with-desired-state-configurations/">Azure Persistence with Desired State Configurations</a>
 * <a href="https://www.netspi.com/blog/technical/cloud-penetration-testing/extract-credentials-from-azure-kubernetes-service/">How To Extract Credentials from Azure Kubernetes Service (AKS)</a>
+* <a href="https://www.netspi.com/blog/technical-blog/cloud-pentesting/extracting-managed-identity-certificates-from-azure-arc-service/">Extracting Managed Identity Certificates from the Azure Arc Service</a>
 
 ### Presentations
 * <a href="https://youtu.be/CUTwkuiRgqg">Extracting all the Azure Passwords - DEF CON 29 - Cloud Village</a>
