@@ -162,7 +162,9 @@ Function Get-AzDomainInfo
         else{New-Item -ItemType Directory $folder|Out-Null ; New-Item -ItemType Directory $folder"\Az"|Out-Null}; $folder = -join ($folder, "\Az")}
     else{if(Test-Path Az){}else{New-Item -ItemType Directory Az|Out-Null};$folder= -join ($pwd, "\Az")}
 
-
+    # Clean up double quotes from Subscription Name
+    $Subscription = $Subscription.Replace('"',"'")
+    
     if(Test-Path $folder"\"$Subscription){}
     else{New-Item -ItemType Directory $folder"\"$Subscription | Out-Null}
     
