@@ -202,15 +202,25 @@ $lookupResult = ""
                 if ($status -eq 200){
                     Write-Host "Found Container - $dirGuess"
                     # URL for listing publicly available files
-                    $uriList = "https://"+$dirGuess+"?restype=container&comp=list"
-                    $FileList = (Invoke-WebRequest -uri $uriList -Method Get).Content
+                    $uriList = "https://"+$dirGuess+"?restype=container&comp=list&include=versions"
+                    $FileList = (Invoke-WebRequest -uri $uriList -Headers @{"x-ms-version"="2019-12-12"} -Method Get).Content
                     # Microsoft includes these characters in the response, Thanks...
                     [xml]$xmlFileList = $FileList -replace "ï»¿"
-                    $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob.Name
+                    $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob
 
                     # Parse the XML results
                     if($foundURL.Length -gt 1){
-                        foreach($url in $foundURL){Write-Host -ForegroundColor Cyan "`tPublic File Available: https://$dirGuess/$url";if ($OutputFile){$url >> $OutputFile}}
+                        foreach($url in $foundURL){
+                            if($null -ne $url.VersionId){
+                                $dateTime = Get-Date ([DateTime]$url.VersionId).ToUniversalTime() -UFormat %s
+                                Write-Host -ForegroundColor Cyan "`tPublic File Available: https://$dirGuess/$($url.Name)`n`t`tAvailable version: $($url.VersionId)"
+                                if ($OutputFile){$url >> $OutputFile}
+                            }
+                            else{
+                                Write-Host -ForegroundColor Cyan "`tPublic File Available: https://$dirGuess/$($url.Name)"
+                                if ($OutputFile){$url >> $OutputFile}
+                            }
+                        }
                     }
                     else{Write-Host -ForegroundColor Cyan "`tEmpty Public Container Available: $uriList";if ($OutputFile){$uriList >> $OutputFile}}
                 }
