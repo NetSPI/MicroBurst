@@ -1,0 +1,69 @@
+<#
+    File: Invoke-AzMachineLearninApi.ps1
+    Author: Christian Bortone (@xybytes), - 2025
+    Description: PowerShell function designed to securely retrieve workspace information, Azure Managed Identity token, and storage account key by leveraging compute instance certificate and key for authentication.
+#>
+
+function Invoke-AzAIRequest {
+    param (
+        [string]$SubscriptionId,
+        [string]$ResourceGroupName,
+        [string]$WorkspaceName,
+        [string]$ClusterName,
+        [string]$NodeId,
+        [string]$ApiVersion,
+        [string]$PfxPath,
+        [string]$PfxPassword
+    )
+
+    # Check Values
+    $params = @{
+        SubscriptionId = $SubscriptionId
+        ResourceGroupName = $ResourceGroupName
+        WorkspaceName = $WorkspaceName
+        ClusterName = $ClusterName
+        NodeId = $NodeId
+        ApiVersion = $ApiVersion
+        PfxPath = $PfxPath
+        PfxPassword = $PfxPassword
+    }
+
+    foreach ($key in $params.Keys) {
+        if (-not $params[$key]) {
+            Write-Error "$key is not defined or is empty."
+            return
+        }
+    }
+
+    # Request URL
+    $url = ("https://eastus2.cert.api.azureml.ms/xdsbatchai/hosttoolapi/subscriptions/{0}/resourceGroups/{1}/workspaces/{2}/clusters/{3}/nodes/{4}?api-version={5}" -f `
+        $SubscriptionId, `
+        $ResourceGroupName, `
+        $WorkspaceName, `
+        $ClusterName, `
+        $NodeId, `
+        $ApiVersion
+    )
+
+    Write-Host "URL: $url"
+
+    # Request Body
+    $body = @{
+        RequestType = "getworkspace"
+    } | ConvertTo-Json -Depth 10
+
+    # HTTP Headers
+    $headers = @{
+        "Accept" = "application/json"
+        "Host" = "eastus2.cert.api.azureml.ms"
+    }
+
+    # Load PFX
+    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+    $cert.Import($PfxPath, $PfxPassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
+
+    # POST Request
+    $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json" -Certificate $cert -Headers $headers
+
+    return $response
+}
