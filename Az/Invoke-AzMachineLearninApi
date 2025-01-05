@@ -11,7 +11,6 @@ function Invoke-AzAIRequest {
         [string]$WorkspaceName,
         [string]$ClusterName,
         [string]$NodeId,
-        [string]$ApiVersion,
         [string]$PfxPath,
         [string]$PfxPassword
     )
@@ -23,7 +22,6 @@ function Invoke-AzAIRequest {
         WorkspaceName = $WorkspaceName
         ClusterName = $ClusterName
         NodeId = $NodeId
-        ApiVersion = $ApiVersion
         PfxPath = $PfxPath
         PfxPassword = $PfxPassword
     }
@@ -36,7 +34,7 @@ function Invoke-AzAIRequest {
     }
 
     # Request URL
-    $url = ("https://eastus2.cert.api.azureml.ms/xdsbatchai/hosttoolapi/subscriptions/{0}/resourceGroups/{1}/workspaces/{2}/clusters/{3}/nodes/{4}?api-version={5}" -f `
+    $url = ("https://eastus2.cert.api.azureml.ms/xdsbatchai/hosttoolapi/subscriptions/{0}/resourceGroups/{1}/workspaces/{2}/clusters/{3}/nodes/{4}?api-version=2018-02-01" -f `
         $SubscriptionId, `
         $ResourceGroupName, `
         $WorkspaceName, `
@@ -48,9 +46,19 @@ function Invoke-AzAIRequest {
     Write-Host "URL: $url"
 
     # Request Body
-    $body = @{
+    $body_getworkspace = @{
         RequestType = "getworkspace"
     } | ConvertTo-Json -Depth 10
+
+    $body_getaadtoken = @{
+        RequestType = "getaadtoken"
+        RequestBody = '{"resource":"https://management.azure.com"}'
+    } | ConvertTo-Json -Depth 10 -Compress
+
+
+    $body_getworkspacesecrets = @{
+        RequestType = "getworkspacesecrets"
+    } | ConvertTo-Json -Depth 10 -Compress
 
     # HTTP Headers
     $headers = @{
@@ -62,8 +70,37 @@ function Invoke-AzAIRequest {
     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
     $cert.Import($PfxPath, $PfxPassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
 
+    
     # POST Request
-    $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json" -Certificate $cert -Headers $headers
+    $getworkspace = Invoke-RestMethod -Uri $url -Method Post -Body $body_getworkspace -ContentType "application/json" -Certificate $cert -Headers $headers 
+    $getaadtoken = Invoke-RestMethod -Uri $url -Method Post -Body $body_getaadtoken -ContentType "application/json" -Certificate $cert -Headers $headers 
+    $getworkspacesecrets = Invoke-RestMethod -Uri $url -Method Post -Body $body_getworkspacesecrets -ContentType "application/json" -Certificate $cert -Headers $headers
 
-    return $response
+    
+    $Getworkspace = (($getworkspace | Select-Object -ExpandProperty response) | ConvertFrom-Json)
+    $Token = ($getaadtoken[0].response | ConvertFrom-Json).Token
+    $AccountKeyJWE = ($getworkspacesecrets[0].response | ConvertFrom-Json).AccountKeyJWE
+
+    return [PSCustomObject]@{
+        Name                        = $Getworkspace.name
+        ID                          = $Getworkspace.id
+        WorkspaceId                 = $Getworkspace.properties.workspaceId
+        Location                    = $Getworkspace.location
+        StorageAccount              = $Getworkspace.properties.storageAccount
+        PublicNetworkAccess         = $Getworkspace.properties.publicNetworkAccess
+        KeyVault                    = $Getworkspace.properties.keyVault
+        ipAllowlist                 = $Getworkspace.properties.ipAllowlist
+        FriendlyName                = $Getworkspace.properties.friendlyName
+        ProvisioningState           = $Getworkspace.properties.provisioningState
+        TenantId                    = $Getworkspace.properties.tenantId
+        ContainerRegistry           = $Getworkspace.properties.containerRegistry
+        NotebookInfo                = $Getworkspace.properties.notebookInfo
+        DiscoveryUrl                = $Getworkspace.properties.discoveryUrl
+        MlFlowTrackingUri           = $Getworkspace.properties.mlFlowTrackingUri
+        EnableDataIsolation         = $Getworkspace.properties.enableDataIsolation
+        CredentialType              = $Getworkspace.properties.credentialType
+        Token                       = $Token
+        AccountKeyJWE               = $AccountKeyJWE
+    }
+
 }
