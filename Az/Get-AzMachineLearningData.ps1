@@ -4,7 +4,7 @@
     Description: PowerShell functions for dumping Azure Machine Learning Workspace information.
 #>
 
-function Get-AzMachineLearningData{
+function Get-AzMachineLearningData {
 
 <#
     .SYNOPSIS
@@ -50,67 +50,74 @@ function Get-AzMachineLearningData{
         [string]$folder = ""
     )
 
-    # Check login status
+    # Check login status and authenticate if necessary
     $LoginStatus = Get-AzContext
     $accountName = ($LoginStatus.Account).Id
-    if ($LoginStatus.Account -eq $null){Write-Warning "No active login. Prompting for login." 
-        try {Connect-AzAccount -ErrorAction Stop}
-        catch{Write-Warning "Login process failed."}
+    if ($LoginStatus.Account -eq $null) {
+        Write-Warning "No active login. Prompting for login."
+        try {
+            Connect-AzAccount -ErrorAction Stop
+        } catch {
+            Write-Warning "Login process failed."
+        }
     }
 
-    # Subscription name is technically required if one is not already set, list sub names if one is not provided "Get-AzSubscription"
-    if ($Subscription){        
+    # Ensure subscription context is set
+    if ($Subscription) {
         Select-AzSubscription -SubscriptionName $Subscription | Out-Null
-    }
-    else{
-        # List subscriptions, pipe out to gridview selection
+    } else {
+        # Prompt user to select subscription(s) if not provided
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzBatchAccountData -Subscription $sub -folder $folder}
+        foreach ($sub in $subChoice) {
+            Get-AzBatchAccountData -Subscription $sub -folder $folder
+        }
         return
     }
 
     Write-Verbose "Logged In as $accountName"
 
-    # Folder setup
-    if ($folder -ne ""){
-        if(Test-Path $folder){}
-        else{New-Item -ItemType Directory $folder | Out-Null}
+    # Setup output folder, create if it does not exist
+    if ($folder -ne "") {
+        if (!(Test-Path $folder)) {
+            New-Item -ItemType Directory $folder | Out-Null
+        }
+    } else {
+        $folder = $PWD.Path
     }
-    else{$folder = $PWD.Path}
 
-    # Stop the change warnings
+    # Suppress breaking change warnings from Az module
     Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
 
     Write-Verbose -Message ('Dumping Workspaces from the "' + (Get-AzContext).Subscription.Name + '" Subscription')
 
-    # Get ML Workspaces
+    # Retrieve all ML Workspaces in the specified resource group
     $workspaces = Get-AzMLWorkspace -ResourceGroupName $ResourceGroupName
 
     Write-Verbose "`t$($workspaces.Count) Workspace(s) Enumerated"
 
-    $workspaces | ForEach-Object{
+    # Iterate through each workspace
+    $workspaces | ForEach-Object {
 
         $currentWorkspace = $_.Name
 
         Write-Verbose "`t`tAttempting to dump data from the $currentWorkspace workspace"
 
+        # Retrieve and save workspace keys
         try {
-            # Get Workspace Keys
             Write-Verbose "`t`t`tAttempting to dump keys"
             $workspaceKeys = Get-AzMLWorkspaceKey -ResourceGroupName $ResourceGroupName -Name $_.Name
             $workspaceKeys | Out-File -Append "$folder\$currentWorkspace-Keys.txt"
-        }catch{
-        Write-Warning "Failed to retrieve keys for workspace : $currentWorkspace"
+        } catch {
+            Write-Warning "Failed to retrieve keys for workspace : $currentWorkspace"
         }
 
-        
+        # Retrieve and save compute resources
         try {
-            # Get Workspace Compute Resources
             Write-Verbose "`t`t`t`tAttempting to dump compute data"
             $computes = Get-AzMLWorkspaceCompute -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
                 ForEach-Object {
-                $propAsObj = $_.Property | ConvertFrom-Json
+                    $propAsObj = $_.Property | ConvertFrom-Json
 
                     [PSCustomObject]@{
                         Name                                 = $_.Name
@@ -136,26 +143,24 @@ function Get-AzMachineLearningData{
                         state                                = $propAsObj.properties.state
                     }
                 }
-            
+
             Write-Verbose "`t`t`t$($computes.Count) Compute Resource(s) Enumerated"
             $computes | Out-File -Append "$folder\$currentWorkspace-Computes.txt"
-        }catch{
-        Write-Warning "Failed to retrieve compute instances for workspace: $currentWorkspace"
+        } catch {
+            Write-Warning "Failed to retrieve compute instances for workspace: $currentWorkspace"
         }
 
+        # Retrieve and save online endpoints
         try {
-            # Get Workspace Online Endpoints
             Write-Verbose "`t`t`t`tAttempting to dump endpoint data"
             $workspace_name = $_.Name
             $endpoints = Get-AzMLWorkspaceOnlineEndpoint -ResourceGroupName $ResourceGroupName -WorkspaceName $workspace_name |
                 ForEach-Object {
-                        
-                        $propAsObj = $_.EndpointPropertiesBaseProperty | ConvertFrom-Json
-                        Write-Verbose "`t`t`t$($endpoints.Count) Endpoint(s) Enumerated"
-                        $sysdataAsObj = $_.SystemData | ConvertFrom-json
-                        Write-Verbose "`t`t`tAttempting to dump keys"
-                        $keys = Get-AzMLWorkspaceOnlineEndpointKey -ResourceGroupName $ResourceGroupName -WorkspaceName $workspace_name -Name $_.Name
-                    
+
+                    $propAsObj = $_.EndpointPropertiesBaseProperty | ConvertFrom-Json
+                    $sysdataAsObj = $_.SystemData | ConvertFrom-Json
+                    $keys = Get-AzMLWorkspaceOnlineEndpointKey -ResourceGroupName $ResourceGroupName -WorkspaceName $workspace_name -Name $_.Name
+
                     [PSCustomObject]@{
                         Name                            = $_.Name
                         Id                              = $_.Id
@@ -174,73 +179,69 @@ function Get-AzMachineLearningData{
                         SecondaryKey                    = $keys.SecondaryKey
                     }
                 }
-        }catch{
-        Write-Warning "Failed to retrieve endpoints for workspace: $currentWorkspace"
-        }
-        
-        Write-Verbose "`t`t`t$($endpoints.Count) Compute Endpoint(s) Enumerated"
-        $endpoints | Out-File -Append "$folder\$currentWorkspace-Endpoints.txt"
 
+            Write-Verbose "`t`t`t$($endpoints.Count) Compute Endpoint(s) Enumerated"
+            $endpoints | Out-File -Append "$folder\$currentWorkspace-Endpoints.txt"
+        } catch {
+            Write-Warning "Failed to retrieve endpoints for workspace: $currentWorkspace"
+        }
+
+        # Retrieve and save jobs
         try {
-            # Get Workspace Jobs
             Write-Verbose "`t`t`t`tAttempting to dump jobs data"
             $jobs = Get-AzMLWorkspaceJob -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
                 ForEach-Object {
 
                     $propAsObj = $_.Property | ConvertFrom-Json
-                    Write-Verbose "`t`t`t$($endpoints.Count) Job(s) Enumerated"
 
                     [PSCustomObject]@{
-                    Name                            = $_.Name
-                    Id                              = $_.Id
-                    SystemDataCreatedAt             = $_.SystemDataCreatedAt
-                    SystemDataCreatedBy             = $_.SystemDataCreatedBy
-                    jobType                         = $propAsObj.jobType
-                    endpoint                        = $propAsObj.services.Studio.endpoint
-                    command                         = $propAsObj.command
-                    environmentId                   = $propAsObj.environmentId
-                    outputs                         = $propAsObj.outputs.default
+                        Name                            = $_.Name
+                        Id                              = $_.Id
+                        SystemDataCreatedAt             = $_.SystemDataCreatedAt
+                        SystemDataCreatedBy             = $_.SystemDataCreatedBy
+                        jobType                         = $propAsObj.jobType
+                        endpoint                        = $propAsObj.services.Studio.endpoint
+                        command                         = $propAsObj.command
+                        environmentId                   = $propAsObj.environmentId
+                        outputs                         = $propAsObj.outputs.default
                     }
-
                 }
 
             Write-Verbose "`t`t`t$($jobs.Count) Compute Job(s) Enumerated"
-            $computes | Out-File -Append "$folder\$currentWorkspace-Jobs.txt"
-        }catch{
-        Write-Warning "Failed to retrieve jobs for workspace: $currentWorkspace"
+            $jobs | Out-File -Append "$folder\$currentWorkspace-Jobs.txt"
+        } catch {
+            Write-Warning "Failed to retrieve jobs for workspace: $currentWorkspace"
         }
 
-    try {
-        # Get Workspace Models
-        $models = Get-AzMLWorkspaceModelContainer -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
-            ForEach-Object {
+        # Retrieve and save models
+        try {
+            $models = Get-AzMLWorkspaceModelContainer -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
+                ForEach-Object {
 
-                [PSCustomObject]@{
-                Name                            = $_.Name
-                Id                              = $_.Id
-                SystemDataCreatedAt             = $_.SystemDataCreatedAt
-                Type                            = $_.Type
-                ProvisioningState               = $_.ProvisioningState
-                IsArchived                      = $_.IsArchived
+                    [PSCustomObject]@{
+                        Name                            = $_.Name
+                        Id                              = $_.Id
+                        SystemDataCreatedAt             = $_.SystemDataCreatedAt
+                        Type                            = $_.Type
+                        ProvisioningState               = $_.ProvisioningState
+                        IsArchived                      = $_.IsArchived
+                    }
                 }
 
-            }
-
             Write-Verbose "`t`t`t$($models.Count) Compute Model(s) Enumerated"
-            $computes | Out-File -Append "$folder\$currentWorkspace-Models.txt"
-    }catch{
-        Write-Warning "Failed to retrieve models for workspace: $currentWorkspace"
-    }
+            $models | Out-File -Append "$folder\$currentWorkspace-Models.txt"
+        } catch {
+            Write-Warning "Failed to retrieve models for workspace: $currentWorkspace"
+        }
 
-    try {   
-        # Get Storage Account Keys of a Workspace.
-        $storagekey = Get-AzMLWorkspaceStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $_.Name
-        $storagekey | Out-File -Append "$folder\$currentWorkspace-Storagekey.txt"
-    } catch {
-        Write-Warning "Failed to retrieve storage account keys for workspace: $currentWorkspace"
-    }
- 
-    Write-Verbose "`t`tCompleted dumping of the $currentWorkspace workspace"
-    
+        # Retrieve and save storage account keys
+        try {
+            $storagekey = Get-AzMLWorkspaceStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $_.Name
+            $storagekey | Out-File -Append "$folder\$currentWorkspace-Storagekey.txt"
+        } catch {
+            Write-Warning "Failed to retrieve storage account keys for workspace: $currentWorkspace"
+        }
+
+        Write-Verbose "`t`tCompleted dumping of the $currentWorkspace workspace"
     }
 }
