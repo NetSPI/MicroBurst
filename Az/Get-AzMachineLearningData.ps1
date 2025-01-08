@@ -19,22 +19,23 @@ function Get-AzMachineLearningData {
         The folder to output to.
     .EXAMPLE
         PS C:\> Get-AzMachineLearningData -ResourceGroupName "ML-ResourceGroup" -folder MLOutput -Verbose
-        VERBOSE: Logged In as christin.b@xybytes.com
+        VERBOSE: Logged In as christian@xybytes.com
         VERBOSE: Dumping Workspaces from the "main-subscription" Subscription
         VERBOSE:  1 Workspace(s) Enumerated
         VERBOSE:   Attempting to dump data from the space03 workspace
         VERBOSE:    Attempting to dump keys
-        VERBOSE:     Attempting to dump compute data
-        VERBOSE:    3 Compute Resource(s) Enumerated
-        VERBOSE:     Attempting to dump endpoint data
-        VERBOSE:    0 Endpoint(s) Enumerated
-        VERBOSE:    Attempting to dump keys
-        VERBOSE:     Compute Endpoint(s) Enumerated
-        VERBOSE:     Attempting to dump jobs data
-        VERBOSE:     Job(s) Enumerated
-        VERBOSE:     Job(s) Enumerated
-        VERBOSE:    2 Compute Job(s) Enumerated
-        VERBOSE:    3 Compute Model(s) Enumerated
+        VERBOSE:    Attempting to dump compute data
+        VERBOSE:     3 Compute Resource(s) Enumerated
+        VERBOSE:    Attempting to dump endpoint data
+        VERBOSE:     1 Endpoint(s) Enumerated
+        VERBOSE:    Attempting to dump jobs data
+        VERBOSE:     2 Compute Job(s) Enumerated
+        VERBOSE:    Attempting to dump Models
+        VERBOSE:     3 Model(s) Enumerated
+        VERBOSE:    Attempting to dump Storage Account Key
+        VERBOSE:    Attempting to dump Connection(s)
+        VERBOSE:     2 Connection(s) Enumerated
+        VERBOSE:      Attempting to dump secret for connection(s)
         VERBOSE:   Completed dumping of the space03 workspace
 #>
 
@@ -114,7 +115,7 @@ function Get-AzMachineLearningData {
 
         # Retrieve and save compute resources
         try {
-            Write-Verbose "`t`t`t`tAttempting to dump compute data"
+            Write-Verbose "`t`t`tAttempting to dump compute data"
             $computes = Get-AzMLWorkspaceCompute -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
                 ForEach-Object {
                     $propAsObj = $_.Property | ConvertFrom-Json
@@ -144,7 +145,7 @@ function Get-AzMachineLearningData {
                     }
                 }
 
-            Write-Verbose "`t`t`t$($computes.Count) Compute Resource(s) Enumerated"
+            Write-Verbose "`t`t`t`t$($computes.Count) Compute Resource(s) Enumerated"
             $computes | Out-File -Append "$folder\$currentWorkspace-Computes.txt"
         } catch {
             Write-Warning "Failed to retrieve compute instances for workspace: $currentWorkspace"
@@ -152,7 +153,7 @@ function Get-AzMachineLearningData {
 
         # Retrieve and save online endpoints
         try {
-            Write-Verbose "`t`t`t`tAttempting to dump endpoint data"
+            Write-Verbose "`t`t`tAttempting to dump endpoint data"
             $workspace_name = $_.Name
             $endpoints = Get-AzMLWorkspaceOnlineEndpoint -ResourceGroupName $ResourceGroupName -WorkspaceName $workspace_name |
                 ForEach-Object {
@@ -180,7 +181,7 @@ function Get-AzMachineLearningData {
                     }
                 }
 
-            Write-Verbose "`t`t`t$($endpoints.Count) Compute Endpoint(s) Enumerated"
+            Write-Verbose "`t`t`t`t$($_.Name.Count) Endpoint(s) Enumerated"
             $endpoints | Out-File -Append "$folder\$currentWorkspace-Endpoints.txt"
         } catch {
             Write-Warning "Failed to retrieve endpoints for workspace: $currentWorkspace"
@@ -188,7 +189,7 @@ function Get-AzMachineLearningData {
 
         # Retrieve and save jobs
         try {
-            Write-Verbose "`t`t`t`tAttempting to dump jobs data"
+            Write-Verbose "`t`t`tAttempting to dump jobs data"
             $jobs = Get-AzMLWorkspaceJob -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
                 ForEach-Object {
 
@@ -207,7 +208,7 @@ function Get-AzMachineLearningData {
                     }
                 }
 
-            Write-Verbose "`t`t`t$($jobs.Count) Compute Job(s) Enumerated"
+            Write-Verbose "`t`t`t`t$($jobs.Count) Compute Job(s) Enumerated"
             $jobs | Out-File -Append "$folder\$currentWorkspace-Jobs.txt"
         } catch {
             Write-Warning "Failed to retrieve jobs for workspace: $currentWorkspace"
@@ -215,6 +216,7 @@ function Get-AzMachineLearningData {
 
         # Retrieve and save models
         try {
+            Write-Verbose "`t`t`tAttempting to dump Models"
             $models = Get-AzMLWorkspaceModelContainer -ResourceGroupName $ResourceGroupName -WorkspaceName $_.Name |
                 ForEach-Object {
 
@@ -228,7 +230,7 @@ function Get-AzMachineLearningData {
                     }
                 }
 
-            Write-Verbose "`t`t`t$($models.Count) Compute Model(s) Enumerated"
+            Write-Verbose "`t`t`t`t$($models.Count) Model(s) Enumerated"
             $models | Out-File -Append "$folder\$currentWorkspace-Models.txt"
         } catch {
             Write-Warning "Failed to retrieve models for workspace: $currentWorkspace"
@@ -236,10 +238,61 @@ function Get-AzMachineLearningData {
 
         # Retrieve and save storage account keys
         try {
+            Write-Verbose "`t`t`tAttempting to dump Storage Account Key"
             $storagekey = Get-AzMLWorkspaceStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $_.Name
             $storagekey | Out-File -Append "$folder\$currentWorkspace-Storagekey.txt"
         } catch {
             Write-Warning "Failed to retrieve storage account keys for workspace: $currentWorkspace"
+        }
+
+        # Gather and store connections and keys
+        Write-Verbose "`t`t`tAttempting to dump Connection(s)"
+        $url = "https://management.azure.com/subscriptions/$Subscription/resourceGroups/$ResourceGroupName/providers/Microsoft.MachineLearningServices/workspaces/$currentWorkspace/connections?api-version=2023-08-01-preview"
+
+        try {
+            $accessToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
+            if (-not $accessToken) {
+                Write-Error "Unable to retrieve the access token. Make sure you are logged in using Az PowerShell."
+                exit 1
+            }
+        } catch {
+            Write-Error "Error while obtaining the access token: $_"
+            exit 1
+        }
+
+        # HTTP headers
+        $headers = @{ 
+            "Authorization" = "Bearer $accessToken"
+            "Content-Type"  = "application/json"
+        }
+
+        try {
+            # HTTP request to access connections within the workspace.
+            $connectionsResponse = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -ErrorAction Stop
+            Write-Verbose "`t`t`t`t$($connectionsResponse.value.Count) Connection(s) Enumerated"
+        } catch {
+            Write-Error "Error while fetching connections: $_"
+            exit 1
+        }
+
+        # For each connection, retrieve the secret.
+        Write-Verbose "`t`t`t`t`tAttempting to dump secret for connection(s)"
+        foreach ($connection in $connectionsResponse.value) {
+            try {
+                $connectionName = $connection.name
+                $secretUrl = "https://management.azure.com/subscriptions/$Subscription/resourceGroups/$ResourceGroupName/providers/Microsoft.MachineLearningServices/workspaces/$currentWorkspace/connections/$connectionName/listsecrets?api-version=2023-08-01-preview"
+                $secretsResponse = Invoke-RestMethod -Uri $secretUrl -Method Post -Headers $headers -ErrorAction Stop -Verbose:$false 4>$null
+
+                $connectionObject = [PSCustomObject]@{
+                    Name   = $connection.name
+                    Type   = $connection.type
+                    Secret = $secretsResponse.properties.credentials.key
+                }
+
+                $connectionObject | Out-File -Append "$folder\$currentWorkspace-Connections.txt"
+            } catch {
+                Write-Error "Error processing connection '$($connection.name)': $_"
+            }
         }
 
         Write-Verbose "`t`tCompleted dumping of the $currentWorkspace workspace"

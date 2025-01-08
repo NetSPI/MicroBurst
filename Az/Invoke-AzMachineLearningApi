@@ -7,7 +7,7 @@
 function Invoke-AzMachineLearninApi {
 <#
     .SYNOPSIS
-        PowerShell script designed to retrieve sensitive information—such as storage account keys, workspace data, and the managed identity access token—from an Azure Machine Learning compute instance.
+        PowerShell script designed to retrieve sensitive information such as storage account keys, workspace data, and the managed identity access token from an Azure Machine Learning compute instance.
     .DESCRIPTION
         This script demonstrates how an attacker, upon obtaining the SSH private key for a compute instance or gaining access through Azure Machine Learning Studio, could exploit the system to retrieve sensitive information. 
         Specifically, the attacker could access storage account keys, workspace data, and the managed identity access token of the instance.
