@@ -1,9 +1,3 @@
-<#
-    File: Get-AzMachineLearningData.ps1
-    Author: Christian Bortone (@xybytes) - 2025
-    Description: PowerShell functions for dumping Azure Machine Learning Workspace information.
-#>
-
 function Get-AzMachineLearningData {
 
 <#
@@ -18,12 +12,11 @@ function Get-AzMachineLearningData {
     .PARAMETER folder
         The folder to output to.
     .EXAMPLE
-        PS C:\> Get-AzMachineLearningData -ResourceGroupName "ML-ResourceGroup" -folder MLOutput -Verbose
+        PS C:\> Get-AzMachineLearningData -folder MLOutput -Verbose
         VERBOSE: Logged In as christian@xybytes.com
         VERBOSE: Dumping Workspaces from the "main-subscription" Subscription
         VERBOSE:  1 Workspace(s) Enumerated
         VERBOSE:   Attempting to dump data from the space03 workspace
-        VERBOSE:    Attempting to dump keys
         VERBOSE:    Attempting to dump compute data
         VERBOSE:     3 Compute Resource(s) Enumerated
         VERBOSE:    Attempting to dump endpoint data
@@ -32,7 +25,6 @@ function Get-AzMachineLearningData {
         VERBOSE:     2 Compute Job(s) Enumerated
         VERBOSE:    Attempting to dump Models
         VERBOSE:     3 Model(s) Enumerated
-        VERBOSE:    Attempting to dump Storage Account Key
         VERBOSE:    Attempting to dump Connection(s)
         VERBOSE:     2 Connection(s) Enumerated
         VERBOSE:      Attempting to dump secret for connection(s)
@@ -41,8 +33,6 @@ function Get-AzMachineLearningData {
 
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory=$true, HelpMessage="Resource group name.")]
-        [string]$ResourceGroupName,
 
         [Parameter(Mandatory=$false, HelpMessage="Subscription to use.")]
         [string]$Subscription = "",
@@ -93,7 +83,9 @@ function Get-AzMachineLearningData {
     Write-Verbose -Message ('Dumping Workspaces from the "' + (Get-AzContext).Subscription.Name + '" Subscription')
 
     # Retrieve all ML Workspaces in the specified resource group
-    $workspaces = Get-AzMLWorkspace -ResourceGroupName $ResourceGroupName
+    #$workspaces = Get-AzMLWorkspace -ResourceGroupName $ResourceGroupName
+
+    $workspaces = Get-AzResource -ResourceType Microsoft.MachineLearningServices/workspaces
 
     Write-Verbose "`t$($workspaces.Count) Workspace(s) Enumerated"
 
@@ -101,17 +93,9 @@ function Get-AzMachineLearningData {
     $workspaces | ForEach-Object {
 
         $currentWorkspace = $_.Name
+        $ResourceGroupName = $_.ResourceGroupName
 
         Write-Verbose "`t`tAttempting to dump data from the $currentWorkspace workspace"
-
-        # Retrieve and save workspace keys
-        try {
-            Write-Verbose "`t`t`tAttempting to dump keys"
-            $workspaceKeys = Get-AzMLWorkspaceKey -ResourceGroupName $ResourceGroupName -Name $_.Name
-            $workspaceKeys | Out-File -Append "$folder\$currentWorkspace-Keys.txt"
-        } catch {
-            Write-Warning "Failed to retrieve keys for workspace : $currentWorkspace"
-        }
 
         # Retrieve and save compute resources
         try {
@@ -234,15 +218,6 @@ function Get-AzMachineLearningData {
             $models | Out-File -Append "$folder\$currentWorkspace-Models.txt"
         } catch {
             Write-Warning "Failed to retrieve models for workspace: $currentWorkspace"
-        }
-
-        # Retrieve and save storage account keys
-        try {
-            Write-Verbose "`t`t`tAttempting to dump Storage Account Key"
-            $storagekey = Get-AzMLWorkspaceStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $_.Name
-            $storagekey | Out-File -Append "$folder\$currentWorkspace-Storagekey.txt"
-        } catch {
-            Write-Warning "Failed to retrieve storage account keys for workspace: $currentWorkspace"
         }
 
         # Gather and store connections and keys
