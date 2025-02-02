@@ -1,3 +1,9 @@
+<#
+    File: Get-AzMachineLearningData.ps1
+    Author: Christian Bortone (@xybytes) - 2025
+    Description: PowerShell functions for dumping Azure Machine Learning Workspace information.
+#>
+
 function Get-AzMachineLearningData {
 
 <#
