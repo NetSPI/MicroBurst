@@ -128,6 +128,11 @@ Function Get-AzPasswords
         [String]$BatchAccounts = "Y",
                 
         [parameter(Mandatory=$false,
+        HelpMessage="Dump Cognitive Services (OpenAI) keys.")]
+        [ValidateSet("Y","N")]
+        [String]$CognitiveServices = "Y",
+                
+        [parameter(Mandatory=$false,
         HelpMessage="Export the AKS kubeconfigs to local files.")]
         [ValidateSet("Y","N")]
         [String]$ExportKube = "N",
@@ -162,7 +167,7 @@ Function Get-AzPasswords
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
         $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts -TestPane $TestPane}
+        foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts -CognitiveServices $CognitiveServices -TestPane $TestPane}
         break
     }
 
@@ -1217,6 +1222,26 @@ Function Get-AzPasswords
                 $TempTblCreds.Rows.Add("Batch Access Key",$_.AccountName,"Secondary",$batchKeys.SecondaryAccountKey,"N/A","N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
             }
             Catch{Write-Verbose "`tNo ListKeys Permissions on the $($_.AccountName) Batch Account"}
+        }
+    }
+
+    # Cognitive Services (OpenAI) Keys Section
+    if ($CognitiveServices -eq 'Y'){
+
+        Write-Verbose "Getting List of Azure Open AI Resources"
+
+        #Get list of Cognitive Services (OpenAI) Resources
+        $cogSRVList = Get-AzCognitiveServicesAccount
+
+        $cogSRVList | ForEach-Object{
+            # Get Account Keys
+            Try{
+            $csKeys = Get-AzCognitiveServicesAccountKey -Name $_.AccountName -ResourceGroupName $_.ResourceGroupName
+                # Add the Secrets to the output table
+                $TempTblCreds.Rows.Add("Open AI Key",$_.AccountName,"Primary",$csKeys.Key1,$_.Endpoint,"N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+                $TempTblCreds.Rows.Add("Open AI Key",$_.AccountName,"Secondary",$csKeys.Key2,$_.Endpoint,"N/A","N/A","N/A","Key","N/A",$subName) | Out-Null
+            }
+            Catch{Write-Verbose "`tNo ListKeys Permissions on the $($_.AccountName) Open AI Resource"}
         }
     }
 
