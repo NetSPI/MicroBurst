@@ -7,8 +7,8 @@ Function Invoke-AzElevatedAccessToggle {
 
     try {
 
-        $Token = Get-AzAccessToken
-        $Headers = @{Authorization = "Bearer $($Token.Token)" }
+        $Token = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
+        $Headers = @{Authorization = "Bearer $Token" }
         $ElevatedAccessToggle = Invoke-RestMethod -Method POST -Uri "https://management.azure.com/providers/Microsoft.Authorization/elevateAccess?api-version=2016-07-01" -Headers $Headers
 
         $ElevatedAccessToggle

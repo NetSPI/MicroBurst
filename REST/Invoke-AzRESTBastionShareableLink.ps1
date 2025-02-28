@@ -13,8 +13,8 @@ function Invoke-AzRestBastionShareableLink {
     [string]$VMName = ""
     )
 
-    $Token = Get-AzAccessToken
-    $Headers = @{Authorization = "Bearer $($Token.Token)" }
+    $Token = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
+    $Headers = @{Authorization = "Bearer $Token" }
 
     $AzBastions = Get-AzBastion
     Write-Output "Enabling Shareable Link feature on all Azure bastions"

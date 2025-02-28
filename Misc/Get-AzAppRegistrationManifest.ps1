@@ -19,7 +19,7 @@ Function Get-AzAppRegistrationManifest
     Param()
 
     $resource = "https://graph.microsoft.com"
-    $accessToken = (Get-AzAccessToken -ResourceUrl $resource).Token
+    $accessToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -ResourceUrl $resource -AsSecureString).token)).GetNetworkCredential().Password
     $url = "https://graph.microsoft.com/v1.0/myorganization/applications/?`$select=displayName,id,appId,createdDateTime,keyCredentials"
 
     $authHeader = @{

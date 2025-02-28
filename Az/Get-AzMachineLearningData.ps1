@@ -231,7 +231,7 @@ function Get-AzMachineLearningData {
         $url = "https://management.azure.com/subscriptions/$Subscription/resourceGroups/$ResourceGroupName/providers/Microsoft.MachineLearningServices/workspaces/$currentWorkspace/connections?api-version=2023-08-01-preview"
 
         try {
-            $accessToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
+            $accessToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -ResourceUrl "https://management.azure.com" -AsSecureString).token)).GetNetworkCredential().Password
             if (-not $accessToken) {
                 Write-Error "Unable to retrieve the access token. Make sure you are logged in using Az PowerShell."
                 exit 1

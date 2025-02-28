@@ -5,8 +5,8 @@ function Get-AzRestBastionShareableLink {
     # https://learn.microsoft.com/en-us/azure/bastion/shareable-link
 
 
-    $Token = Get-AzAccessToken
-    $Headers = @{Authorization = "Bearer $($Token.Token)" }
+    $Token = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
+    $Headers = @{Authorization = "Bearer $Token)" }
 
     $AzBastions = Get-AzBastion
     Write-Output "Getting all Shareable Links for Azure bastions"

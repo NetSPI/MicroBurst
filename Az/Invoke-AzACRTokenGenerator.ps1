@@ -99,7 +99,7 @@ Function Invoke-AzACRTokenGenerator
         $TempTblTokens.Columns.Add("Token") | Out-Null
 
         # Get Token for REST APIs
-        $basetoken = (Get-AzAccessToken).Token
+        $basetoken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
 
         # Iterate through the ACRs
         $acrChoice | ForEach-Object{
@@ -184,7 +184,7 @@ Function Invoke-AzACRTokenTask
     )
 
     # Get Token for REST APIs
-    $basetoken = (Get-AzAccessToken).Token
+    $basetoken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
 
     # Set Random names for the tasks. Prevents conflict issues
     $taskName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})

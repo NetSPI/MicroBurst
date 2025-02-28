@@ -61,7 +61,7 @@ Function Invoke-AzUADeploymentScript
 
         [Parameter(Mandatory=$false,
         HelpMessage="Command to run in the deployment script.")]
-        [string]$Command = "(Get-AzAccessToken -ResourceUrl $TokenScope).Token"
+        [string]$Command = "(New-Object System.Management.Automation.PSCredential('token', (Get-AzAccessToken -ResourceUrl $TokenScope -AsSecureString).token)).GetNetworkCredential().Password"
     )
 
     # Check to see if we're logged in
@@ -109,7 +109,7 @@ Function Invoke-AzUADeploymentScript
         $uamidID = $_.PrincipalId
         $uamidName = $_.Name
         $uamidSub = $_.Id.Split('/')[2]
-        $token = (Get-AzAccessToken).Token        
+        $token = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
 
         Write-Verbose "`t`tChecking permissions on $($_.Name) Managed Identity"
 
@@ -187,7 +187,7 @@ Function Invoke-AzUADeploymentScript
             },
             `"command`": {
                 `"type`": `"String`",
-			    `"defaultValue`":`"(Get-AzAccessToken).Token`"
+			    `"defaultValue`":`"(New-Object System.Management.Automation.PSCredential('token', (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password`"
             }		
         },
         `"variables`": {},

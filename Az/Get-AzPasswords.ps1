@@ -210,7 +210,7 @@ Function Get-AzPasswords
                 #$currentOID = ($LoginStatus.Account.ExtendedProperties.HomeAccountId).split('.')[0]
                 
                 # Borrowed from - https://www.michev.info/Blog/Post/2140/decode-jwt-access-and-id-tokens-via-powershell
-                $tokenPayload = ((Get-AzAccessToken).Token).Split(".")[1].Replace('-', '+').Replace('_', '/')
+                $tokenPayload = ((New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password).Split(".")[1].Replace('-', '+').Replace('_', '/')
                 #Fix padding as needed, keep adding "=" until string length modulus 4 reaches 0
                 while ($tokenPayload.Length % 4) { $tokenPayload += "=" }               
                 $currentOID = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($tokenPayload)) | ConvertFrom-Json).oid
@@ -486,8 +486,8 @@ Function Get-AzPasswords
                             $spSecret = ($_.SiteConfig.AppSettings | where Name -EQ 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET').value
 
                             # Use APIs to grab Client ID
-                            $mgmtToken = (Get-AzAccessToken -ResourceUrl 'https://management.azure.com/').Token
-                            $subID = (get-azcontext).Subscription.Id
+                            $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -AsSecureString).token)).GetNetworkCredential().Password
+                            $subID = (Get-AzContext).Subscription.Id
                             $servicePrincipalID = ((Invoke-WebRequest -Uri (-join('https://management.azure.com/subscriptions/',$subID,'/resourceGroups/',$_.ResourceGroup,'/providers/Microsoft.Web/sites/',$_.Name,'/Config/authsettingsV2/list?api-version=2018-11-01')) -UseBasicParsing -Headers @{ Authorization ="Bearer $mgmtToken"} -Verbose:$false ).content | ConvertFrom-Json).properties.identityProviders.azureActiveDirectory.registration.clientId
 
                             $spClientID = ""
@@ -669,7 +669,7 @@ Function Get-AzPasswords
                 #Assume there's no MI
                 $dumpMI = $false
                 #Need to fetch via the REST endpoint to check if there's an identity
-                $mgmtToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
+                $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -AsSecureString).token)).GetNetworkCredential().Password
                 $accountDetails = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
                 if($accountDetails.identity.type -match "systemassigned"){
                 
@@ -716,7 +716,7 @@ Function Get-AzPasswords
                             try{
                                 if($TestPane -eq "Y"){
                                     #For test pane execution we need to avoid the call to Publish-AzAutomationRunbook since the runbook needs to be a draft
-                                    $mgmtToken = (Get-AzAccessToken).Token
+                                    $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
                                     #Hit the /draft/testJob endpoint directly to create the job, poll for it to finish, and get the output
                                     $createJob = (Invoke-WebRequest -Verbose:$false -Method PUT -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobName,"/draft/testJob?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"} -ContentType application/json -Body "{'runOn':''}").Content | ConvertFrom-Json
                                     $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobName,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
@@ -799,7 +799,7 @@ Function Get-AzPasswords
 
                                 try{
                                     if($TestPane -eq "Y"){
-                                        $mgmtToken = (Get-AzAccessToken).Token
+                                        $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
                                         $createJob = (Invoke-WebRequest -Verbose:$false -Method PUT -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobToRun,"/draft/testJob?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"} -ContentType application/json -Body "{'runOn':''}").Content | ConvertFrom-Json
                                         $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $jobToRun,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
                                         while($jobStatus.Status -ne "Completed"){
@@ -868,7 +868,7 @@ Function Get-AzPasswords
                     
                         try{
                             if($TestPane -eq "Y"){
-                                $mgmtToken = (Get-AzAccessToken).Token
+                                $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
                                 $createJob = (Invoke-WebRequest -Verbose:$false -Method PUT -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $dumpMiJobName,"/draft/testJob?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"} -ContentType application/json -Body "{'runOn':''}").Content | ConvertFrom-Json
                                 $jobStatus = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $AutoAccount.SubscriptionId, "/resourceGroups/", $AutoAccount.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $AutoAccount.AutomationAccountName, "/runbooks/", $dumpMiJobName,"/draft/testJob?api-version=2019-06-01")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
                                 while($jobStatus.Status -ne "Completed"){
@@ -959,7 +959,7 @@ Function Get-AzPasswords
         $clusters = Get-AzAksCluster
 
         # Get a token for the API
-        $bearerToken = (Get-AzAccessToken).Token
+        $bearerToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
 
         $clusters | ForEach-Object{
             $clusterID = $_.Id
@@ -1080,7 +1080,7 @@ Function Get-AzPasswords
                     $appSettings = ($_.ApplicationSettings.MICROSOFT_PROVIDER_AUTHENTICATION_SECRET)
 
                     # Use APIs to grab Client ID
-                    $mgmtToken = (Get-AzAccessToken -ResourceUrl 'https://management.azure.com/').Token
+                    $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -AsSecureString).token)).GetNetworkCredential().Password
                     $subID = (get-azcontext).Subscription.Id
                     $servicePrincipalID = ((Invoke-WebRequest -Uri (-join('https://management.azure.com/subscriptions/',$subID,'/resourceGroups/',$_.ResourceGroup,'/providers/Microsoft.Web/sites/',$_.Name,'/Config/authsettingsV2/list?api-version=2018-11-01')) -UseBasicParsing -Headers @{ Authorization ="Bearer $mgmtToken"} -Verbose:$false ).content | ConvertFrom-Json).properties.identityProviders.azureActiveDirectory.registration.clientId
 
@@ -1107,7 +1107,7 @@ Function Get-AzPasswords
         # Container Apps Section
 
         # Variable Set Up
-        $CAmanagementToken = (Get-AzAccessToken).Token
+        $CAmanagementToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
         $subID = (Get-AzContext).Subscription.Id
 
         # List Resource Groups

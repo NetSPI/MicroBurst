@@ -145,7 +145,7 @@ Function Get-AzAutomationConnectionScope{
         # Get Managed Identities (System-Assigned or User-Assigned)
         Write-Verbose "`t`tGetting list of Managed Identities"
         # Get a management API token and check the APIs for any usage of Managed Identities
-        $mgmtToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
+        $mgmtToken = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -ResourceUrl "https://management.azure.com" -AsSecureString).token)).GetNetworkCredential().Password
         $accountDetails = (Invoke-WebRequest -Verbose:$false -Uri (-join ("https://management.azure.com/subscriptions/", $_.SubscriptionId, "/resourceGroups/", $_.ResourceGroupName, "/providers/Microsoft.Automation/automationAccounts/", $_.AutomationAccountName, "?api-version=2015-10-31")) -Headers @{Authorization="Bearer $mgmtToken"}).Content | ConvertFrom-Json
 
         $subID = $_.SubscriptionId

@@ -93,7 +93,7 @@ Function Get-AzMachineLearningCredentials
     # Find All the AML Resources
     $workspaces = Get-AzResource -ResourceType Microsoft.MachineLearningServices/workspaces
     
-    $token = (Get-AzAccessToken).Token
+    $token = (New-Object System.Management.Automation.PSCredential("token", (Get-AzAccessToken -AsSecureString).token)).GetNetworkCredential().Password
 
     $workspaces | ForEach-Object{
         
