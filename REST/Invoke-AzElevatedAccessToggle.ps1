@@ -7,8 +7,18 @@ Function Invoke-AzElevatedAccessToggle {
 
     try {
 
-        $Token = Get-AzAccessToken
-        $Headers = @{Authorization = "Bearer $($Token.Token)" }
+        $AccessToken = Get-AzAccessToken
+        if ($AccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+            try {
+                $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $Token = $AccessToken.Token
+        }
+        $Headers = @{Authorization = "Bearer $Token" }
         $ElevatedAccessToggle = Invoke-RestMethod -Method POST -Uri "https://management.azure.com/providers/Microsoft.Authorization/elevateAccess?api-version=2016-07-01" -Headers $Headers
 
         $ElevatedAccessToggle

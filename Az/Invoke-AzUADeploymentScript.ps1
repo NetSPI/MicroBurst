@@ -109,7 +109,17 @@ Function Invoke-AzUADeploymentScript
         $uamidID = $_.PrincipalId
         $uamidName = $_.Name
         $uamidSub = $_.Id.Split('/')[2]
-        $token = (Get-AzAccessToken).Token        
+        $AccessToken = Get-AzAccessToken
+        if ($AccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+            try {
+                $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $Token = $AccessToken.Token
+        }
 
         Write-Verbose "`t`tChecking permissions on $($_.Name) Managed Identity"
 

@@ -32,7 +32,17 @@ function Invoke-AzVMCommandREST{
 
     if($managementToken -eq ""){
         Write-Output "No token provided, attempting to use Az PowerShell context"
-        $managementToken = (Get-AzAccessToken).Token
+        $AccessToken = Get-AzAccessToken
+        if ($AccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+            try {
+                $managementToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $managementToken = $AccessToken.Token
+        }
         
         if($managementToken -eq $null){
             Write-Output "Unable to use Az PowerShell module for a token, attempting IMDS token"

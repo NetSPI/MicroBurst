@@ -10,10 +10,29 @@ $SuppressAzurePowerShellBreakingChangeWarnings = $true
 Connect-AzAccount -Identity | Out-Null
 
 # Get a token
-$token = Get-AzAccessToken | ConvertTo-Json
+$AccessToken = Get-AzAccessToken
+if ($AccessToken.Token -is [System.Security.SecureString]) {
+    $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+    try {
+        $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+    } finally {
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+    }
+} else {
+    $Token = $AccessToken.Token
+}
+
+# Recreate token for body
+$body = @{
+    Token = $Token
+    ExpiresOn = $AccessToken.ExpiresOn
+    TenantId = $AccessToken.TenantId
+    UserId = $AccessToken.UserId
+    Type = $AccessToken.Type
+}
 
 # Send the token to the callback URL
-Invoke-RestMethod -Uri $callbackURL -Method Post -Body $token | Out-Null
+Invoke-RestMethod -Uri $callbackURL -Method Post -Body ($body | ConvertTo-Json) | Out-Null
 
 }
 

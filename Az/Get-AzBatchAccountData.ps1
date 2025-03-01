@@ -177,7 +177,17 @@ function Get-AzBatchAccountData{
         }
         
         # Get all the extra Sub-Tasks
-        $batchToken = (Get-AzAccessToken -ResourceUrl "https://batch.core.windows.net/").Token
+        $AccessToken = Get-AzAccessToken -ResourceUrl "https://batch.core.windows.net/"
+        if ($AccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+            try {
+                $batchToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $batchToken = $AccessToken.Token
+        }
         $jobsList = ((Invoke-WebRequest -Verbose:$false -Uri "https://$($batchContext.AccountEndpoint)/jobs?api-version=2022-10-01.16.0&maxresults=1000&paginationeffort=1" -Headers @{Authorization="Bearer $batchToken"}).Content | ConvertFrom-Json).value
         $jobsList | ForEach-Object{
             $currentJob = $_.id

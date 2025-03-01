@@ -5,8 +5,18 @@ function Get-AzRestBastionShareableLink {
     # https://learn.microsoft.com/en-us/azure/bastion/shareable-link
 
 
-    $Token = Get-AzAccessToken
-    $Headers = @{Authorization = "Bearer $($Token.Token)" }
+    $AccessToken = Get-AzAccessToken
+    if ($AccessToken.Token -is [System.Security.SecureString]) {
+        $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+        try {
+            $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+        }
+    } else {
+        $Token = $AccessToken.Token
+    }
+    $Headers = @{Authorization = "Bearer $Token" }
 
     $AzBastions = Get-AzBastion
     Write-Output "Getting all Shareable Links for Azure bastions"
