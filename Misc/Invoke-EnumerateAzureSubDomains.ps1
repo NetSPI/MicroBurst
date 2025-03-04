@@ -1,6 +1,6 @@
 ﻿<#
     File: Invoke-EnumerateAzureSubDomains.ps1
-    Author: Karl Fosaaen (@kfosaaen), NetSPI - 2018
+    Author: Karl Fosaaen (@kfosaaen), NetSPI - 2018 & Renos Nikolaou (@r3n_hat) - 2025
     Description: PowerShell functions for enumerating Azure/Microsoft hosted resources.
     Parts of the Permutations.txt file borrowed from - https://github.com/brianwarehime/inSp3ctor
 #>
@@ -35,6 +35,7 @@ Function Invoke-EnumerateAzureSubDomains
 		VERBOSE: Found test12345678.documents.azure.com
 		VERBOSE: Found test12345678.azure-api.net
 		VERBOSE: Found test12345678.sharepoint.com
+  		VERBOSE: Found test12345678.westus2.cloudapp.azure.com
 
 		Subdomain                                Service                
 		---------                                -------                
@@ -51,7 +52,9 @@ Function Invoke-EnumerateAzureSubDomains
 		test12345678.queue.core.windows.net      Storage Accounts       
 		test12345678.blob.core.windows.net       Storage Accounts       
 		test12345678.file.core.windows.net       Storage Accounts       
-		test12345678.table.core.windows.net      Storage Accounts    
+		test12345678.table.core.windows.net      Storage Accounts
+  		test12345678.westus2.cloudapp.azure.com	 West US 2 Virtual Machines
+    
         .LINK
         https://blog.netspi.com/enumerating-azure-services/
 #>
@@ -89,7 +92,48 @@ Function Invoke-EnumerateAzureSubDomains
 					'azureedge.net'='CDN';
 					'search.windows.net'='Search Appliance';
 					'azure-api.net'='API Services';
-					'azurecr.io'='Azure Container Registry'
+					'azurecr.io'='Azure Container Registry';
+					'eastus.cloudapp.azure.com'           = 'East US Virtual Machines';
+					'eastus2.cloudapp.azure.com'          = 'East US 2 Virtual Machines';
+					'westus.cloudapp.azure.com'           = 'West US Virtual Machines';
+					'westus2.cloudapp.azure.com'          = 'West US 2 Virtual Machines';
+					'westus3.cloudapp.azure.com'          = 'West US 3 Virtual Machines';
+					'centralus.cloudapp.azure.com'        = 'Central US Virtual Machines';
+					'northcentralus.cloudapp.azure.com'   = 'North Central US Virtual Machines';
+					'southcentralus.cloudapp.azure.com'   = 'South Central US Virtual Machines';
+					'westcentralus.cloudapp.azure.com'    = 'West Central US Virtual Machines';
+					'northeurope.cloudapp.azure.com'      = 'North Europe (Ireland) Virtual Machines';
+					'westeurope.cloudapp.azure.com'       = 'West Europe (Netherlands) Virtual Machines';
+					'uksouth.cloudapp.azure.com'          = 'United Kingdom South Virtual Machines';
+					'ukwest.cloudapp.azure.com'           = 'United Kingdom West Virtual Machines';
+					'francecentral.cloudapp.azure.com'    = 'France Central Virtual Machines';
+					'germanywestcentral.cloudapp.azure.com' = 'Germany West Central Virtual Machines';
+					'italynorth.cloudapp.azure.com'       = 'Italy North Virtual Machines';
+					'norwayeast.cloudapp.azure.com'       = 'Norway East Virtual Machines';
+					'polandcentral.cloudapp.azure.com'    = 'Poland Central Virtual Machines';
+					'spaincentral.cloudapp.azure.com'     = 'Spain Central Virtual Machines';
+					'swedencentral.cloudapp.azure.com'    = 'Sweden Central Virtual Machines';
+					'switzerlandnorth.cloudapp.azure.com' = 'Switzerland North Virtual Machines';
+					'australiaeast.cloudapp.azure.com'    = 'Australia East Virtual Machines';
+					'australiacentral.cloudapp.azure.com' = 'Australia Central Virtual Machines';
+					'australiasoutheast.cloudapp.azure.com' = 'Australia Southeast Virtual Machines';
+					'centralindia.cloudapp.azure.com'     = 'Central India Virtual Machines';
+					'southindia.cloudapp.azure.com'       = 'South India Virtual Machines';
+					'japaneast.cloudapp.azure.com'        = 'Japan East Virtual Machines';
+					'japanwest.cloudapp.azure.com'        = 'Japan West Virtual Machines';
+					'koreacentral.cloudapp.azure.com'     = 'Korea Central Virtual Machines';
+					'koreasouth.cloudapp.azure.com'       = 'Korea South Virtual Machines';
+					'eastasia.cloudapp.azure.com'         = 'East Asia (Hong Kong) Virtual Machines';
+					'southeastasia.cloudapp.azure.com'    = 'Southeast Asia (Singapore) Virtual Machines';
+					'newzealandnorth.cloudapp.azure.com'  = 'New Zealand North Virtual Machines';
+					'canadacentral.cloudapp.azure.com'    = 'Canada Central Virtual Machines';
+					'canadaeast.cloudapp.azure.com'       = 'Canada East Virtual Machines';
+					'uaenorth.cloudapp.azure.com'         = 'UAE North Virtual Machines';
+					'qatarcentral.cloudapp.azure.com'     = 'Qatar Central Virtual Machines';
+					'israelcentral.cloudapp.azure.com'    = 'Israel Central Virtual Machines';
+					'southafricanorth.cloudapp.azure.com' = 'South Africa North Virtual Machines';
+					'mexicocentral.cloudapp.azure.com'    = 'Mexico Central Virtual Machines';
+					'brazilsouth.cloudapp.azure.com'      = 'Brazil South Virtual Machines';
 					}
 
     $runningList = @()
