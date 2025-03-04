@@ -231,8 +231,18 @@ function Get-AzMachineLearningData {
         $url = "https://management.azure.com/subscriptions/$Subscription/resourceGroups/$ResourceGroupName/providers/Microsoft.MachineLearningServices/workspaces/$currentWorkspace/connections?api-version=2023-08-01-preview"
 
         try {
-            $accessToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com").Token
-            if (-not $accessToken) {
+            $AccessToken = Get-AzAccessToken -ResourceUrl "https://management.azure.com"
+            if ($AccessToken.Token -is [System.Security.SecureString]) {
+                $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+                try {
+                    $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+                } finally {
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+                }
+            } else {
+                $Token = $AccessToken.Token
+            }
+            if (-not $Token) {
                 Write-Error "Unable to retrieve the access token. Make sure you are logged in using Az PowerShell."
                 exit 1
             }
@@ -243,7 +253,7 @@ function Get-AzMachineLearningData {
 
         # HTTP headers
         $headers = @{ 
-            "Authorization" = "Bearer $accessToken"
+            "Authorization" = "Bearer $Token"
             "Content-Type"  = "application/json"
         }
 

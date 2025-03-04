@@ -99,7 +99,17 @@ Function Invoke-AzACRTokenGenerator
         $TempTblTokens.Columns.Add("Token") | Out-Null
 
         # Get Token for REST APIs
-        $basetoken = (Get-AzAccessToken).Token
+        $AccessToken = Get-AzAccessToken
+        if ($AccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+            try {
+                $basetoken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $basetoken = $AccessToken.Token
+        }
 
         # Iterate through the ACRs
         $acrChoice | ForEach-Object{
@@ -184,7 +194,17 @@ Function Invoke-AzACRTokenTask
     )
 
     # Get Token for REST APIs
-    $basetoken = (Get-AzAccessToken).Token
+    $AccessToken = Get-AzAccessToken
+    if ($AccessToken.Token -is [System.Security.SecureString]) {
+        $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+        try {
+            $basetoken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+        }
+    } else {
+        $basetoken = $AccessToken.Token
+    }
 
     # Set Random names for the tasks. Prevents conflict issues
     $taskName = -join ((65..90) + (97..122) | Get-Random -Count 15 | % {[char]$_})

@@ -93,7 +93,17 @@ Function Get-AzMachineLearningCredentials
     # Find All the AML Resources
     $workspaces = Get-AzResource -ResourceType Microsoft.MachineLearningServices/workspaces
     
-    $token = (Get-AzAccessToken).Token
+    $AccessToken = Get-AzAccessToken
+    if ($AccessToken.Token -is [System.Security.SecureString]) {
+        $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+        try {
+            $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+        }
+    } else {
+        $Token = $AccessToken.Token
+    }
 
     $workspaces | ForEach-Object{
         
