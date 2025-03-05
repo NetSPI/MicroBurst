@@ -221,7 +221,7 @@ Function Get-AzPasswords
                 } else {
                     $Token = $AccessToken.Token
                 }
-                $tokenPayload = ($Token.Split(".")[1].Replace('-', '+').Replace('_', '/')
+                $tokenPayload = ($Token.Split(".")[1].Replace('-', '+').Replace('_', '/'))
                 #Fix padding as needed, keep adding "=" until string length modulus 4 reaches 0
                 while ($tokenPayload.Length % 4) { $tokenPayload += "=" }               
                 $currentOID = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($tokenPayload)) | ConvertFrom-Json).oid
