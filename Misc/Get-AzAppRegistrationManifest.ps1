@@ -19,11 +19,21 @@ Function Get-AzAppRegistrationManifest
     Param()
 
     $resource = "https://graph.microsoft.com"
-    $accessToken = (Get-AzAccessToken -ResourceUrl $resource).Token
+    $AccessToken = Get-AzAccessToken -ResourceUrl $resource
+    if ($AccessToken.Token -is [System.Security.SecureString]) {
+        $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($AccessToken.Token)
+        try {
+            $Token = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+        }
+    } else {
+        $Token = $AccessToken.Token
+    }
     $url = "https://graph.microsoft.com/v1.0/myorganization/applications/?`$select=displayName,id,appId,createdDateTime,keyCredentials"
 
     $authHeader = @{
-      "Authorization" = "Bearer " + $accessToken
+      "Authorization" = "Bearer " + $Token
     }
 
     while ($null -ne $url) {
