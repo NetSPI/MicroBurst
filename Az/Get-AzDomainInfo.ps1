@@ -256,7 +256,11 @@ Function Get-AzDomainInfo
 
                             # URL for listing publicly available files
                             $uriList = "https://"+(-join ($StorageAccountName,'.blob.core.windows.net/',$_.Name))+"/?restype=container&comp=list"
-                            $FileList = (Invoke-WebRequest -uri $uriList -Method Get -Verbose:$False).Content
+                            try {
+                                $FileList = (Invoke-WebRequest -Uri $uriList -Method Get -Verbose:$False).Content
+                            } catch {
+                                # No Action
+                            }
                                 
                             # Microsoft includes these characters in the response, Thanks...
                             [xml]$xmlFileList = $FileList -replace 'ï»¿'
