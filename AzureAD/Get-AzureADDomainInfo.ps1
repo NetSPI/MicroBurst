@@ -87,14 +87,97 @@ Function Get-AzureADDomainInfo
     if ($Users -eq "Y"){   
         # Get/Write Users for each domain
         Write-Verbose "Getting Domain Users..."
-        # Base user info
-        $azureADUsers = Get-AzureADUser -All 1
-        $azureADUsers | select DisplayName,UserPrincipalName,ObjectId,ObjectType,AccountEnabled,AgeGroup,City,CompanyName,ConsentProvidedForMinor,Country,CreationType,Department,DirSyncEnabled,FacsimileTelephoneNumber,GivenName,IsCompromised,ImmutableId,JobTitle,LastDirSyncTime,LegalAgeGroupClassification,Mail,MailNickName,Mobile,OnPremisesSecurityIdentifier,PasswordPolicies,PasswordProfile,PhysicalDeliveryOfficeName,PostalCode,PreferredLanguage,RefreshTokensValidFromDateTime,ShowInAddressList,SipProxyAddress,State,StreetAddress,Surname,TelephoneNumber,UsageLocation,UserState,UserStateChangedOn,UserType | Export-Csv -NoTypeInformation -LiteralPath $folder"\AzureAD\AzureAD_Users.CSV"
-        $azureADUserscount = $azureADUsers.count
+    
+        $azureADUsers = Get-AzureADUser -All $true
+
+        $entraIDRoles = Get-AzureADDirectoryRole
+
+        $userRolesMap = @{}
+        foreach ($role in $entraIDRoles) {
+            $members = Get-AzureADDirectoryRoleMember -ObjectId $role.ObjectId
+            foreach ($member in $members) {
+                if (-not $userRolesMap.ContainsKey($member.ObjectId)) {
+                    $userRolesMap[$member.ObjectId] = @()
+                }
+                $userRolesMap[$member.ObjectId] += $role.DisplayName
+            }
+        }
+
+        $azureADGroups = Get-AzureADGroup -All $true
+        $userGroupsMap = @{}
+
+        foreach ($group in $azureADGroups) {
+            $members = Get-AzureADGroupMember -ObjectId $group.ObjectId
+            
+            foreach ($member in $members) {
+                if (-not $userGroupsMap.ContainsKey($member.ObjectId)) {
+                    $userGroupsMap[$member.ObjectId] = @()
+                }
+                $userGroupsMap[$member.ObjectId] += $group.DisplayName
+            }
+        }
+
+        $exportUsers = $azureADUsers | ForEach-Object {
+            $AzureADroles = $userRolesMap[$_.ObjectId] -join "; "
+            $AzureADgroups = if ($userGroupsMap.ContainsKey($_.ObjectId) -and $userGroupsMap[$_.ObjectId]) { 
+            $userGroupsMap[$_.ObjectId] -join "; " 
+            } else { 
+                ""
+            }
+
+            [PSCustomObject]@{
+                DisplayName                       = $_.DisplayName
+                UserPrincipalName                 = $_.UserPrincipalName
+                ObjectId                          = $_.ObjectId
+                AzureADRole                       = $AzureADroles
+                AzureADGroups                     = $AzureADgroups                
+                ObjectType                        = $_.ObjectType
+                AccountEnabled                    = $_.AccountEnabled
+                AgeGroup                          = $_.AgeGroup
+                City                              = $_.City
+                CompanyName                       = $_.CompanyName
+                ConsentProvidedForMinor           = $_.ConsentProvidedForMinor
+                Country                           = $_.Country
+                CreationType                      = $_.CreationType
+                Department                        = $_.Department
+                DirSyncEnabled                    = $_.DirSyncEnabled
+                FacsimileTelephoneNumber          = $_.FacsimileTelephoneNumber
+                GivenName                         = $_.GivenName
+                Surname                           = $_.Surname
+                IsCompromised                     = $_.IsCompromised
+                ImmutableId                       = $_.ImmutableId
+                JobTitle                          = $_.JobTitle
+                LastDirSyncTime                   = $_.LastDirSyncTime
+                LegalAgeGroupClassification       = $_.LegalAgeGroupClassification
+                Mail                              = $_.Mail
+                MailNickName                      = $_.MailNickName
+                Mobile                            = $_.Mobile
+                OnPremisesSecurityIdentifier      = $_.OnPremisesSecurityIdentifier
+                PasswordPolicies                  = $_.PasswordPolicies
+                PasswordProfile                   = $_.PasswordProfile
+                PhysicalDeliveryOfficeName        = $_.PhysicalDeliveryOfficeName
+                PostalCode                        = $_.PostalCode
+                PreferredLanguage                 = $_.PreferredLanguage
+                RefreshTokensValidFromDateTime    = $_.RefreshTokensValidFromDateTime
+                ShowInAddressList                 = $_.ShowInAddressList
+                SipProxyAddress                   = $_.SipProxyAddress
+                State                             = $_.State
+                StreetAddress                     = $_.StreetAddress
+                TelephoneNumber                   = $_.TelephoneNumber
+                UsageLocation                     = $_.UsageLocation
+                UserState                         = $_.UserState
+                UserStateChangedOn                = $_.UserStateChangedOn
+                UserType                          = $_.UserType
+
+            }
+        }
+    
+        $exportUsers | Export-Csv -NoTypeInformation -LiteralPath "$folder\AzureAD\AzureAD_Users.CSV"
+    
+        $azureADUserscount = $azureADUsers.Count
         Write-Verbose "`t$azureADUserscount Domain Users were found."
-
     }
-
+    
     if ($Groups -eq "Y"){
         # Get/Write Groups
         Write-Verbose "Getting Domain Groups..."
