@@ -94,6 +94,16 @@ Function Get-AzDomainInfo
         HelpMessage="Dump list of Groups.")]
         [ValidateSet("Y","N")]
         [String]$Groups = "Y",
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump list of RBAC of Users")]
+        [ValidateSet("Y","N")]
+        [String]$RBACUsers = "Y",
+
+        [parameter(Mandatory=$false,
+        HelpMessage="Dump list of RBAC of Groups")]
+        [ValidateSet("Y","N")]
+        [String]$RBACGroups = "Y",
         
         [parameter(Mandatory=$false,
         HelpMessage="Dump list of Storage Accounts.")]
@@ -125,6 +135,7 @@ Function Get-AzDomainInfo
         [ValidateSet("Y","N")]
         [String]$LoginBypass = "N"
     )
+
 
     if ($LoginBypass -eq "N"){
         # Check to see if we're logged in with Az
@@ -212,7 +223,98 @@ Function Get-AzDomainInfo
         Write-Verbose "`tDomain Group Users were enumerated for $groupCount groups."
     }
 
+    If ($RBACUsers -eq "Y") {
+        Write-Verbose "Getting RBAC for Users..."
 
+        # Check Output Path
+        if(Test-Path $folder"\RBAC"){}
+        else{New-Item -ItemType Directory $folder"\RBAC" | Out-Null}
+
+        
+        # Define the user object
+        $adusers = Get-AzADUser
+        
+        # Initialize an array to hold the role assignment information
+        $roleAssignmentsInfo = @()
+    
+        foreach ($aduser in $adusers) {
+            
+            # Ensure the ObjectId is valid (non-null)
+            if ($aduser.Id) {
+                
+                # Retrieve role assignments for the user using their ObjectId
+                $roleAssignments = Get-AzRoleAssignment -PrincipalId $aduser.Id
+                
+                # Loop through each role assignment to fetch the role definition name
+                foreach ($roleAssignment in $roleAssignments) {
+                    
+                    # Ensure the RoleDefinitionId exists
+                    if ($roleAssignment.RoleDefinitionId) {
+                        $roleDef = Get-AzRoleDefinition -Id $roleAssignment.RoleDefinitionId
+    
+                        # Create a custom object
+                        $roleAssignmentsInfo += [PSCustomObject]@{
+                            UserPrincipalName   = $aduser.UserPrincipalName
+                            RoleAssignmentName  = $roleDef.Name
+                            Scope               = $roleAssignment.Scope
+                        }
+                    }
+                }
+            }
+        }
+    
+        # Print the results in a table format
+        $roleAssignmentsInfo | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\RBAC_Users.CSV"
+        
+        Write-Verbose "`t$($roleAssignmentsInfo.Count) role were enumerated for users"
+    }
+
+    If ($RBACGroups -eq "Y") {
+        Write-Verbose "Getting RBAC for Groups..."
+
+        # Check Output Path
+        if(Test-Path $folder"\RBAC"){}
+        else{New-Item -ItemType Directory $folder"\RBAC" | Out-Null}
+        
+        # Get all Azure AD groups
+        $adgroups = Get-AzADGroup
+
+        # Initialize an array to hold the role assignment information
+        $roleAssignmentsInfo = @()
+
+        foreach ($adgroup in $adgroups) {
+           
+            # Ensure the Id is valid (non-null/empty)
+            if ($adgroup.Id) {
+                
+                # Retrieve role assignments for the group using their Id
+                $roleAssignments = Get-AzRoleAssignment -PrincipalId $adgroup.Id
+                
+                # Loop through each role assignment to fetch the role definition name
+                foreach ($roleAssignment in $roleAssignments) {
+                    
+                    # Ensure the RoleDefinitionId exists
+                    if ($roleAssignment.RoleDefinitionId) {
+                        $roleDef = Get-AzRoleDefinition -Id $roleAssignment.RoleDefinitionId
+
+                        # Create a custom object
+                        $roleAssignmentsInfo += [PSCustomObject]@{
+                            PrincipalName       = $adgroup.DisplayName
+                            PrincipalType       = "Group"
+                            RoleAssignmentName  = $roleDef.Name
+                            Scope               = $roleAssignment.Scope
+                        }
+                    }
+                }
+            } 
+        }
+
+        # Print the results in a table format
+        $roleAssignmentsInfo | Export-Csv -NoTypeInformation -LiteralPath $folder"\RBAC\RBAC_Groups.CSV"
+
+        Write-Verbose "`t$($roleAssignmentsInfo.Count) role were enumerated for groups"
+    }
+    
     # Get Storage Account name(s)
     if($StorageAccounts -eq "Y"){
         
