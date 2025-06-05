@@ -203,7 +203,7 @@ $lookupResult = ""
                     Write-Host "Found Container - $dirGuess"
                     # URL for listing publicly available files
                     $uriList = "https://"+$dirGuess+"?restype=container&comp=list&include=versions"
-                    $FileList = (Invoke-WebRequest -uri $uriList -Headers @{"x-ms-version"="2019-12-12"} -Method Get).Content
+                    $FileList = (Invoke-WebRequest -uri $uriList -Headers @{"x-ms-version"="2019-12-12"} -Method Get -UseBasicParsing).Content
                     # Microsoft includes these characters in the response, Thanks...
                     [xml]$xmlFileList = $FileList -replace "ï»¿"
                     $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob
