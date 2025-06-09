@@ -90,11 +90,12 @@ $lookupResult = ""
         $lookupResult = ""
     }
 
-    $linecount = Get-Content $Permutations | Measure-Object –Line | select Lines
+    $permutationsContent = Get-Content $Permutations | Where-Object {$_.trim() -ne "" }
+    $linecount = $permutationsContent | Measure-Object –Line | select Lines
     $iter = 0
 
     # Check Permutations
-    foreach($word in (Get-Content $Permutations)){
+    foreach($word in $permutationsContent){
         
         # Track the progress
         $iter++
@@ -167,22 +168,20 @@ $lookupResult = ""
         Write-Host ""
     }
 
+    # Read in file
+    $folderContent = Get-Content $Folders | Where-Object {$_.trim() -ne "" }
+
+    # Append any Bing results
+    if ($BingAPIKey){$folderContent += ($bingContainers | select -Unique)}
+
     # Get line counts for number of storage accounts for statusing
-    $foldercount = Get-Content $Folders | Measure-Object –Line | select Lines
-    if ($BingAPIKey){ $foldercount.Lines += (($bingContainers | select -Unique).count)}
+    $foldercount = $folderContent | Measure-Object –Line | select Lines
 
 
     # Go through the valid blob storage accounts and confirm Anonymous Access / List files
     foreach ($subDomain in $runningList){
         
         $iter = 0
-
-        # Read in file
-        $folderContent = Get-Content $Folders
-
-        # Append any Bing results
-        $folderContent += ($bingContainers | select -Unique)
-        
 
         # Folder Names to guess for containers
         foreach ($folderName in $folderContent){
@@ -206,10 +205,10 @@ $lookupResult = ""
                     $FileList = (Invoke-WebRequest -uri $uriList -Headers @{"x-ms-version"="2019-12-12"} -Method Get -UseBasicParsing).Content
                     # Microsoft includes these characters in the response, Thanks...
                     [xml]$xmlFileList = $FileList -replace "ï»¿"
-                    $foundURL = $xmlFileList.EnumerationResults.Blobs.Blob
+                    $foundURL = @($xmlFileList.EnumerationResults.Blobs.Blob)
 
                     # Parse the XML results
-                    if($foundURL.Length -gt 1){
+                    if($foundURL.Count -gt 0){
                         foreach($url in $foundURL){
                             if($null -ne $url.VersionId){
                                 $dateTime = Get-Date ([DateTime]$url.VersionId).ToUniversalTime() -UFormat %s
