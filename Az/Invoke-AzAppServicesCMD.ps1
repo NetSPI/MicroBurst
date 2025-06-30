@@ -42,7 +42,11 @@ Function Invoke-AzAppServicesCMD {
 
         [Parameter(Mandatory=$false,
         HelpMessage="The password for connecting to the App Service. The script will attempt to fetch a password from the publishing profile if not provided.")]
-        [string]$password = ""
+        [string]$password = "",
+
+        [Parameter(Mandatory=$false,
+        HelpMessage="The flag for using your existing user's RBAC role permissions to execute the command. Generates a management token to use against the Kudu APIs")]
+        [switch]$rbac
 
     )
     
@@ -51,11 +55,13 @@ Function Invoke-AzAppServicesCMD {
         Write-Error "The app $appName does not exist"
         break
     }
+
     if($app.State -ne "Running"){
         Write-Error "The app must be running to execute commands"
         break
     }
-    if($username -eq "" -or $password -eq ""){
+
+    if(($username -eq "" -or $password -eq "") -and (!$rbac)){
         try{
             [xml]$publishingCreds = Get-AzWebAppPublishingProfile -Name $app.Name -ResourceGroupName $app.ResourceGroup
     
@@ -64,24 +70,48 @@ Function Invoke-AzAppServicesCMD {
                 $username = $publishingCreds.publishData.publishProfile[0].userName
                 $password = $publishingCreds.publishData.publishProfile[0].userPWD
             }
+            
+            if($username -ne "REDACTED"){
+                #Need to convert these to a basic authentication header
+                $basicHeader = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes((-join($username,":",$password))))
+            }
+            else{Write-Error "The application does not support publish profile credentials, try the -rbac switch instead";break}
         }
         catch{
             Write-Error "$appName - Either no publishing credentials were available or you have insufficient permissions"
             break
         }
     }
+    else{
+        $mgmtAccessToken = Get-AzAccessToken -ResourceUrl "https://management.azure.com/"
+        if ($mgmtAccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($mgmtAccessToken.Token)
+            try {
+                $mgmtToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $mgmtToken = $mgmtAccessToken.Token
+        }
+    }
 
-    #Need to convert these to a basic authentication header
-    $basicHeader = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes((-join($username,":",$password))))
 
     $commandBody = @{
         "command"=$command;
     }
-        
-    $cmdReq = Invoke-WebRequest -Verbose:$false -Method POST -Uri (-join ("https://", $app.Name, ".scm.azurewebsites.net/api/command")) -Headers @{Authorization="Basic $basicHeader"} -Body ($commandBody | ConvertTo-Json) -ContentType "application/json"
+    
+
+    if(!$rbac){
+        $cmdReq = Invoke-WebRequest -Verbose:$false -Method POST -Uri (-join ("https://", $($app.EnabledHostNames | Where-Object {$_ -like "*.scm.*"}), "/api/command")) -Headers @{Authorization="Basic $basicHeader"} -Body ($commandBody | ConvertTo-Json) -ContentType "application/json"
+    }
+    else{
+        $cmdReq = Invoke-WebRequest -Verbose:$false -Method POST -Uri (-join ("https://", $($app.EnabledHostNames | Where-Object {$_ -like "*.scm.*"}), "/api/command")) -Headers @{Authorization="Bearer $mgmtToken"} -Body ($commandBody | ConvertTo-Json) -ContentType "application/json"
+    }
+
     $cmdResult = $cmdReq.Content | ConvertFrom-Json
 
-    $cmdResult
+    $cmdResult.Output
 
 }
 
