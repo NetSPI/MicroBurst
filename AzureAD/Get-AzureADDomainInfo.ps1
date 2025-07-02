@@ -45,7 +45,6 @@ Function Get-AzureADDomainInfo
         VERBOSE: Getting Domain Service Principals...
         VERBOSE: 	500 service principals were enumerated.
         VERBOSE: All done with AzureAD tasks.
-
 #>
 
     [CmdletBinding()]
@@ -87,14 +86,126 @@ Function Get-AzureADDomainInfo
     if ($Users -eq "Y"){   
         # Get/Write Users for each domain
         Write-Verbose "Getting Domain Users..."
-        # Base user info
-        $azureADUsers = Get-AzureADUser -All 1
-        $azureADUsers | select DisplayName,UserPrincipalName,ObjectId,ObjectType,AccountEnabled,AgeGroup,City,CompanyName,ConsentProvidedForMinor,Country,CreationType,Department,DirSyncEnabled,FacsimileTelephoneNumber,GivenName,IsCompromised,ImmutableId,JobTitle,LastDirSyncTime,LegalAgeGroupClassification,Mail,MailNickName,Mobile,OnPremisesSecurityIdentifier,PasswordPolicies,PasswordProfile,PhysicalDeliveryOfficeName,PostalCode,PreferredLanguage,RefreshTokensValidFromDateTime,ShowInAddressList,SipProxyAddress,State,StreetAddress,Surname,TelephoneNumber,UsageLocation,UserState,UserStateChangedOn,UserType | Export-Csv -NoTypeInformation -LiteralPath $folder"\AzureAD\AzureAD_Users.CSV"
-        $azureADUserscount = $azureADUsers.count
+        
+        # List Users
+        $azureADUsers = Get-AzureADUser -All $true
+
+        # List Directory Roles
+        $entraIDRoles = Get-AzureADDirectoryRole
+
+        # Initialize an empty map to store user roles
+        $userRolesMap = @{}
+        # Loop through each role in the Azure AD roles set
+        foreach ($role in $entraIDRoles) {
+            
+            # Retrieve the members associated with each role
+            $members = Get-AzureADDirectoryRoleMember -ObjectId $role.ObjectId
+            
+            # Loop through each member associated with the role
+            foreach ($member in $members) {
+                
+                # If the user is not already in the map, initialize an empty list
+                if (-not $userRolesMap.ContainsKey($member.ObjectId)) {
+                    $userRolesMap[$member.ObjectId] = @()
+                }
+                
+                # Add the role name to the user's list of roles
+                $userRolesMap[$member.ObjectId] += $role.DisplayName
+            }
+        }
+        
+        # Retrieve all Azure AD groups
+        $azureADGroups = Get-AzureADGroup -All $true
+        
+        # Initialize an empty map to store group memberships for users
+        $userGroupsMap = @{}
+        
+        # Loop through each group in the Azure AD groups
+        foreach ($group in $azureADGroups) {
+            # Retrieve the members of each grou
+            $members = Get-AzureADGroupMember -ObjectId $group.ObjectId
+            
+            # Loop through each member of the group
+            foreach ($member in $members) {
+                
+                # If the user is not already in the map, initialize an empty list
+                if (-not $userGroupsMap.ContainsKey($member.ObjectId)) {
+                    $userGroupsMap[$member.ObjectId] = @()
+                }
+                
+                # Add the group name to the user's list of groups
+                $userGroupsMap[$member.ObjectId] += $group.DisplayName
+            }
+        }
+        
+        # Create an output object for each Azure AD user with their roles and groups
+        $exportUsers = $azureADUsers | ForEach-Object {
+            
+            # Retrieve the roles assigned to the user and join them into a single string
+            $AzureADroles = $userRolesMap[$_.ObjectId] -join "; "
+            
+            # Retrieve the groups the user belongs to and join them into a single string
+            $AzureADgroups = if ($userGroupsMap.ContainsKey($_.ObjectId) -and $userGroupsMap[$_.ObjectId]) { 
+            $userGroupsMap[$_.ObjectId] -join "; " 
+            } else { 
+                ""
+            }
+            
+            # Create a custom object to store the user's details and export them
+            [PSCustomObject]@{
+                DisplayName                       = $_.DisplayName
+                UserPrincipalName                 = $_.UserPrincipalName
+                ObjectId                          = $_.ObjectId
+                DirectoryRoles                    = $AzureADroles
+                ADGroups                          = $AzureADgroups                
+                ObjectType                        = $_.ObjectType
+                AccountEnabled                    = $_.AccountEnabled
+                AgeGroup                          = $_.AgeGroup
+                City                              = $_.City
+                CompanyName                       = $_.CompanyName
+                ConsentProvidedForMinor           = $_.ConsentProvidedForMinor
+                Country                           = $_.Country
+                CreationType                      = $_.CreationType
+                Department                        = $_.Department
+                DirSyncEnabled                    = $_.DirSyncEnabled
+                FacsimileTelephoneNumber          = $_.FacsimileTelephoneNumber
+                GivenName                         = $_.GivenName
+                Surname                           = $_.Surname
+                IsCompromised                     = $_.IsCompromised
+                ImmutableId                       = $_.ImmutableId
+                JobTitle                          = $_.JobTitle
+                LastDirSyncTime                   = $_.LastDirSyncTime
+                LegalAgeGroupClassification       = $_.LegalAgeGroupClassification
+                Mail                              = $_.Mail
+                MailNickName                      = $_.MailNickName
+                Mobile                            = $_.Mobile
+                OnPremisesSecurityIdentifier      = $_.OnPremisesSecurityIdentifier
+                PasswordPolicies                  = $_.PasswordPolicies
+                PasswordProfile                   = $_.PasswordProfile
+                PhysicalDeliveryOfficeName        = $_.PhysicalDeliveryOfficeName
+                PostalCode                        = $_.PostalCode
+                PreferredLanguage                 = $_.PreferredLanguage
+                RefreshTokensValidFromDateTime    = $_.RefreshTokensValidFromDateTime
+                ShowInAddressList                 = $_.ShowInAddressList
+                SipProxyAddress                   = $_.SipProxyAddress
+                State                             = $_.State
+                StreetAddress                     = $_.StreetAddress
+                TelephoneNumber                   = $_.TelephoneNumber
+                UsageLocation                     = $_.UsageLocation
+                UserState                         = $_.UserState
+                UserStateChangedOn                = $_.UserStateChangedOn
+                UserType                          = $_.UserType
+
+            }
+        }
+
+        # Export to CSV
+        $exportUsers | Export-Csv -NoTypeInformation -LiteralPath "$folder\AzureAD\AzureAD_Users.CSV"
+    
+        $azureADUserscount = $azureADUsers.Count
         Write-Verbose "`t$azureADUserscount Domain Users were found."
-
     }
-
+    
     if ($Groups -eq "Y"){
         # Get/Write Groups
         Write-Verbose "Getting Domain Groups..."
