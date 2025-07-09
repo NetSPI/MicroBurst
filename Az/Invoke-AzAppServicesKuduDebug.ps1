@@ -52,7 +52,11 @@ Function Invoke-AzAppServicesKuduDebug {
 
         [Parameter(Mandatory=$false,
         HelpMessage="The password for connecting to the App Service. The script will attempt to fetch a password from the publishing profile if not provided.")]
-        [string]$Password = ""
+        [string]$Password = "",
+
+        [Parameter(Mandatory=$false,
+        HelpMessage="The flag for using your existing user's RBAC role permissions to execute the command. Generates a management token to use against the Kudu APIs")]
+        [switch]$rbac
 
     )
    
@@ -76,7 +80,10 @@ Function Invoke-AzAppServicesKuduDebug {
             # List subscriptions, pipe out to gridview selection
             $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
             $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
-            foreach ($sub in $subChoice) {Invoke-AzAppServicesKuduDebug -Subscription $sub -Command $Command -AppName $AppName -Username $Username -Password $Password -PromptType $PromptType}
+            foreach ($sub in $subChoice) {
+                if ($rbac){Invoke-AzAppServicesKuduDebug -Subscription $sub -Command $Command -AppName $AppName -Username $Username -Password $Password -PromptType $PromptType -rbac}
+                else{Invoke-AzAppServicesKuduDebug -Subscription $sub -Command $Command -AppName $AppName -Username $Username -Password $Password -PromptType $PromptType}
+            }
             break
         }
 
@@ -97,23 +104,27 @@ Function Invoke-AzAppServicesKuduDebug {
         foreach ($app in $appChoice){
             $appObject = Get-AzWebApp -Name $app.Name
 
-            Write-Verbose "`tAttempting to run the `"$Command`" command (via $PromptType) on the container for the `"$($app.Name)`" application"
-
-            try{
-                [xml]$publishProfile = Get-AzWebAppPublishingProfile -Name $appObject.Name -ResourceGroupName $appObject.ResourceGroup
+            if(!$rbac){
+                Write-Verbose "`tAttempting to run the `"$Command`" command (via $PromptType) on the container for the `"$($app.Name)`" application using publishing credentials"
+                try{
+                    [xml]$publishProfile = Get-AzWebAppPublishingProfile -Name $appObject.Name -ResourceGroupName $appObject.ResourceGroup
     
-                #They should all be the same so we can just grab the first
-                if($publishProfile){
-                    $Username = $publishProfile.publishData.publishProfile[0].userName
-                    $Password = $publishProfile.publishData.publishProfile[0].userPWD
+                    #They should all be the same so we can just grab the first
+                    if($publishProfile){
+                        $Username = $publishProfile.publishData.publishProfile[0].userName
+                        $Password = $publishProfile.publishData.publishProfile[0].userPWD
+                    }
                 }
+                catch{
+                    Write-Error "$AppName - Either no publishing credentials were available or you have insufficient permissions"
+                    break
+                }
+                Invoke-AzAppServKuduCMDExec -command $Command -username $Username -password $Password -appName $appObject.Name -PromptType $PromptType -AppHost $($appObject.EnabledHostNames | Where-Object {$_ -like "*.scm.*"})
             }
-            catch{
-                Write-Error "$AppName - Either no publishing credentials were available or you have insufficient permissions"
-                break
+            else{
+                Write-Verbose "`tAttempting to run the `"$Command`" command (via $PromptType) on the container for the `"$($app.Name)`" application using RBAC permissions"
+                Invoke-AzAppServKuduCMDExec -command $Command -appName $appObject.Name -PromptType $PromptType -AppHost $($appObject.EnabledHostNames | Where-Object {$_ -like "*.scm.*"}) -rbac
             }
-
-            Invoke-AzAppServKuduCMDExec -command $Command -username $Username -password $Password -appName $appObject.Name -PromptType $PromptType
         }
         Write-Verbose "App Services Command Execution Completed in the `"$subName`" Subscription"
     }
@@ -121,9 +132,15 @@ Function Invoke-AzAppServicesKuduDebug {
         Write-Host "If publish profile username and password are in use, AppName is a required parameter. Check your parameters."
         break
     }
+    elseif($rbac){
+        # Run the command with RBAC
+        Write-Verbose "`tAttempting to run the `"$Command`" command (via $PromptType) on the container for the $AppName application using RBAC permissions"
+        Invoke-AzAppServKuduCMDExec -command $Command -username $Username -password $Password -appName $AppName -PromptType $PromptType -rbac
+
+    }
     else{
         # Run the command with User/Pass
-        Write-Verbose "`tAttempting to run the `"$Command`" command (via $PromptType) on the container for the $AppName application"
+        Write-Verbose "`tAttempting to run the `"$Command`" command (via $PromptType) on the container for the $AppName application using publishing credentials"
         Invoke-AzAppServKuduCMDExec -command $Command -username $Username -password $Password -appName $AppName -PromptType $PromptType
     }
 }
@@ -145,6 +162,10 @@ Function Invoke-AzAppServKuduCMDExec {
         [string]$appName = "",
 
         [Parameter(Mandatory=$false,
+        HelpMessage="The SCM hostname of the App to target.")]
+        [string]$AppHost = "",
+        
+        [Parameter(Mandatory=$false,
         HelpMessage="The type of prompt to use.")]
         [string]$PromptType = "powershell",
 
@@ -154,32 +175,54 @@ Function Invoke-AzAppServKuduCMDExec {
 
         [Parameter(Mandatory=$false,
         HelpMessage="The password for connecting to the App Service. The script will attempt to fetch a password from the publishing profile if not provided.")]
-        [string]$password = ""
+        [string]$password = "",
+
+        [Parameter(Mandatory=$false,
+        HelpMessage="The flag for using your existing user's RBAC role permissions to execute the command. Generates a management token to use against the Kudu APIs")]
+        [switch]$rbac
 
     )
+
+    if($rbac){
+        $mgmtAccessToken = Get-AzAccessToken -ResourceUrl "https://management.azure.com/"
+        if ($mgmtAccessToken.Token -is [System.Security.SecureString]) {
+            $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($mgmtAccessToken.Token)
+            try {
+                $mgmtToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            }
+        } else {
+            $mgmtToken = $mgmtAccessToken.Token
+        }
+        $authHeader = @{Authorization="Bearer $mgmtToken"}
+    }
+    else{
+        # Convert these to a basic authentication header
+        $basicHeader = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes((-join($username,":",$password))))
+        $authHeader = @{Authorization="Basic $basicHeader"}
+    }
 
     $tid = get-random -Minimum 0 -Maximum 10
     $timeStamp = Get-Date -UFormat %s -Millisecond 0
 
-    # Convert these to a basic authentication header
-    $basicHeader = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes((-join($username,":",$password))))
 
     # Send the Negotiate Request
-    $cmdReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$appName,".scm.azurewebsites.net/api/commandstream/negotiate?clientProtocol=1.4&shell=$promptType&_=0")) -Headers @{Authorization="Basic $basicHeader"} 
+    $cmdReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$AppHost,"/api/commandstream/negotiate?clientProtocol=1.4&shell=$promptType&_=0")) -Headers $authHeader 
     $cmdResult = ($cmdReq.Content | ConvertFrom-Json)
     Add-Type -AssemblyName System.Web
     $connectionToken = ([System.Web.HttpUtility]::UrlPathEncode($cmdResult.ConnectionToken)).Replace('+',"%2b")
 
     # Send the Message ID Request
-    $cmdLongPollReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$appName,".scm.azurewebsites.net/api/commandstream/connect?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken&tid=$tid&_=$timeStamp")) -Headers @{Authorization="Basic $basicHeader"} -ContentType 'application/json; charset=UTF-8'
+    $cmdLongPollReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$AppHost,"/api/commandstream/connect?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken&tid=$tid&_=$timeStamp")) -Headers $authHeader -ContentType 'application/json; charset=UTF-8'
     $messageId = ($cmdLongPollReq.Content |ConvertFrom-Json).C
 
     # Start the command stream
-    $cmdSendReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$appName,".scm.azurewebsites.net/api/commandstream/start?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken")) -Headers @{Authorization="Basic $basicHeader"} -ContentType 'application/json; charset=UTF-8'
+    $cmdSendReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$AppHost,"/api/commandstream/start?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken")) -Headers $authHeader -ContentType 'application/json; charset=UTF-8'
 
     # Send the Send Command Request
     $postParams = @{data=$(-join($command,"`n"))}
-    $cmdSendReq = Invoke-WebRequest -Verbose:$false -Method Post -Uri (-join ("https://",$appName,".scm.azurewebsites.net/api/commandstream/send?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken")) -Body $postParams -Headers @{Authorization="Basic $basicHeader"} -ContentType 'application/x-www-form-urlencoded; charset=UTF-8'
+    $cmdSendReq = Invoke-WebRequest -Verbose:$false -Method Post -Uri (-join ("https://",$AppHost,"/api/commandstream/send?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken")) -Body $postParams -Headers $authHeader -ContentType 'application/x-www-form-urlencoded; charset=UTF-8'
 
     # Send the Poll Request
     $mValueNext = ""
@@ -194,7 +237,7 @@ Function Invoke-AzAppServKuduCMDExec {
     
         # Try the poll request, fail on timeout
         try{
-            $cmdPollReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$appName,".scm.azurewebsites.net/api/commandstream/poll?transport=longPolling&messageId=$messageIdCurrent&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken&tid=$tid&_=$timeStamp")) -Headers @{Authorization="Basic $basicHeader"} -TimeoutSec 1 -ErrorAction Continue
+            $cmdPollReq = Invoke-WebRequest -Verbose:$false -Method Get -Uri (-join ("https://",$AppHost,"/api/commandstream/poll?transport=longPolling&messageId=$messageIdCurrent&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken&tid=$tid&_=$timeStamp")) -Headers $authHeader -TimeoutSec 2 -ErrorAction Continue
         }
         Catch{}
     
@@ -213,7 +256,7 @@ Function Invoke-AzAppServKuduCMDExec {
     }
 
     # end the session on the container
-    $cmdAbortReq = Invoke-WebRequest -Verbose:$false -Method Post -Uri (-join ("https://",$appName,".scm.azurewebsites.net/api/commandstream/abort?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken")) -Headers @{Authorization="Basic $basicHeader"} -ContentType 'application/json; charset=UTF-8'
+    $cmdAbortReq = Invoke-WebRequest -Verbose:$false -Method Post -Uri (-join ("https://",$AppHost,"/api/commandstream/abort?transport=longPolling&clientProtocol=1.4&shell=$promptType&connectionToken=$connectionToken")) -Headers $authHeader -ContentType 'application/json; charset=UTF-8'
     Write-Host "`nOutput from the `"$appName`" Command Execution:"
     $outputString
 }
