@@ -5,8 +5,10 @@ $global:WarningPreference = 'SilentlyContinue'
 
 # Az
 try{
-    Get-InstalledModule -ErrorAction Stop -Name Az | Out-Null
-    Import-Module Az -ErrorAction Stop
+    if (-not (Get-Module -Name Az)) {
+        Get-InstalledModule -ErrorAction Stop -Name Az | Out-Null
+        Import-Module Az -ErrorAction Stop
+    }
     Import-Module $PSScriptRoot\Az\MicroBurst-Az.psm1
     $azStatus = "1"
 }
@@ -16,16 +18,20 @@ catch{Write-Host -ForegroundColor DarkRed "Az module not installed, checking oth
 
 # AzureAD
 try{
-    Get-InstalledModule -ErrorAction Stop -Name AzureAD | Out-Null
-    Import-Module AzureAD -ErrorAction Stop
+    if (-not (Get-Module -Name AzureAD)) {
+        Get-InstalledModule -ErrorAction Stop -Name AzureAD | Out-Null
+        Import-Module AzureAD -ErrorAction Stop
+    }
     Import-Module $PSScriptRoot\AzureAD\MicroBurst-AzureAD.psm1
 }
 catch{Write-Host -ForegroundColor DarkRed "AzureAD module not installed, checking other modules"}
 
 <# AzureRm - Uncomment this section if you want to import the functions
 try{
-    Get-InstalledModule -ErrorAction Stop -Name AzureRM | Out-Null
-    Import-Module AzureRM -ErrorAction Stop
+    if (-not (Get-Module -Name AzureRM)) {
+        Get-InstalledModule -ErrorAction Stop -Name AzureRM | Out-Null
+        Import-Module AzureRM -ErrorAction Stop
+    }
     Import-Module $PSScriptRoot\AzureRM\MicroBurst-AzureRM.psm1
 }
 catch{
@@ -36,8 +42,10 @@ catch{
 
 # MSOL
 try{
-    Get-InstalledModule -ErrorAction Stop -Name msonline | Out-Null
-    Import-Module msonline -ErrorAction Stop
+    if (-not (Get-Module -Name msonline)) {
+        Get-InstalledModule -ErrorAction Stop -Name msonline | Out-Null
+        Import-Module msonline -ErrorAction Stop
+    }
     Import-Module $PSScriptRoot\MSOL\MicroBurst-MSOL.psm1
 }
 catch{Write-Host -ForegroundColor DarkRed "MSOnline module not installed, checking other modules"}
