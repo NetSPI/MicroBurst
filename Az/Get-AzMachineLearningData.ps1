@@ -65,7 +65,7 @@ function Get-AzMachineLearningData {
     } else {
         # Prompt user to select subscription(s) if not provided
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {
             Get-AzBatchAccountData -Subscription $sub -folder $folder
         }

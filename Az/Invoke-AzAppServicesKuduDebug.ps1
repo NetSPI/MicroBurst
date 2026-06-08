@@ -79,7 +79,7 @@ Function Invoke-AzAppServicesKuduDebug {
         else{
             # List subscriptions, pipe out to gridview selection
             $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-            $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+            $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
             foreach ($sub in $subChoice) {
                 if ($rbac){Invoke-AzAppServicesKuduDebug -Subscription $sub -Command $Command -AppName $AppName -Username $Username -Password $Password -PromptType $PromptType -rbac}
                 else{Invoke-AzAppServicesKuduDebug -Subscription $sub -Command $Command -AppName $AppName -Username $Username -Password $Password -PromptType $PromptType}
@@ -97,7 +97,7 @@ Function Invoke-AzAppServicesKuduDebug {
 
         # Filter on App Services Container type - This funciton only supports Windows images
         $appsList = Get-AzWebApp | where state -EQ "Running" | where Kind -NotMatch "linux" | select Name,ResourceGroup,Kind | sort Name
-        $appChoice = $appsList | out-gridview -Title "Select One or More Applications" -PassThru
+        $appChoice = $appsList | Select-MBItem -Title "Select One or More Applications" -PassThru
         if($null -eq $appChoice){Write-Verbose "No Apps Selected"; break}
 
         # For each app, grab the publish profile

@@ -76,7 +76,7 @@ Function Get-AzArcCertificates
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {
             if ($All){Get-AzArcCertificates -Subscription $sub -All}
             else{Get-AzArcCertificates -Subscription $sub -Name $Name}
@@ -100,7 +100,7 @@ Function Get-AzArcCertificates
     elseif($all -eq $true){$arcChoice = $ArcList}
     else{
         # Prompt user for which machine(s) to target
-        $arcChoice = $ArcList| out-gridview -Title "Select One or More Arc systems to attack..." -PassThru
+        $arcChoice = $ArcList| Select-MBItem -Title "Select One or More Arc systems to attack..." -PassThru
     }
 
     foreach ($arc in $arcChoice) {

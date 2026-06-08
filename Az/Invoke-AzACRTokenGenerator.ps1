@@ -72,7 +72,7 @@ Function Invoke-AzACRTokenGenerator
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Invoke-AzACRTokenGenerator -Subscription $sub -TokenScope $TokenScope}
         return
     }
@@ -86,7 +86,7 @@ Function Invoke-AzACRTokenGenerator
     Write-Verbose "`t$($ACRs.Count) Azure Container Registries Enumerated"
 
     # List ACRs, pipe out to gridview selection
-    $acrChoice = $ACRs | out-gridview -Title "Select One or More ACR" -PassThru
+    $acrChoice = $ACRs | Select-MBItem -Title "Select One or More ACR" -PassThru
 
     if($acrChoice.Count -gt 0){
         Write-Verbose "`t$($acrChoice.Count) Azure Container Registries Selected for Targeting"

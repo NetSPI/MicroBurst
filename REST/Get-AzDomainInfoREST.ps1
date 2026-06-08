@@ -69,7 +69,7 @@ Function Get-AzDomainInfoREST {
         # List all subscriptions for a tenant
         $subscriptions = ((Invoke-WebRequest -Uri ('https://management.azure.com/subscriptions?api-version=2019-11-01') -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).content | ConvertFrom-Json).value
         # Select which subscriptions to dump info for
-        $subChoice = $subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
         $SubscriptionId = $subChoice.subscriptionId
 

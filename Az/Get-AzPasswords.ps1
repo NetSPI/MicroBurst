@@ -21,7 +21,7 @@ Function Get-AzPasswords
     .PARAMETER ExportCerts
         Flag for saving private certs locally.           
     .EXAMPLE
-        PS C:\MicroBurst> Get-AzPasswords -Verbose | Out-GridView
+        PS C:\MicroBurst> Get-AzPasswords -Verbose | Format-Table -AutoSize
         VERBOSE: Logged In as testaccount@example.com
         VERBOSE: Getting List of Key Vaults...
         VERBOSE: 	Exporting items from example-private
@@ -166,7 +166,7 @@ Function Get-AzPasswords
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzPasswords -Subscription $sub -ExportCerts $ExportCerts -FunctionApps $FunctionApps -ExportKube $ExportKube -Keys $Keys -AppServices $AppServices -AutomationAccounts $AutomationAccounts -CertificatePassword $CertificatePassword -ACR $ACR -StorageAccounts $StorageAccounts -ModifyPolicies $ModifyPolicies -CosmosDB $CosmosDB -AKS $AKS -ContainerApps $ContainerApps -APIManagement $APIManagement -ServiceBus $ServiceBus -AppConfiguration $AppConfiguration -BatchAccounts $BatchAccounts -CognitiveServices $CognitiveServices -TestPane $TestPane}
         break
     }

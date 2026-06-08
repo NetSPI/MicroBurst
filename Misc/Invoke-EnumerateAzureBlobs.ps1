@@ -161,7 +161,7 @@ $lookupResult = ""
             }
         
         # Prompt for which storage accounts to add
-        $bingChoice = $bingList | select -Unique | out-gridview -Title "Select the Bing storage accounts to include" -PassThru
+        $bingChoice = $bingList | select -Unique | Select-MBItem -Title "Select the Bing storage accounts to include" -PassThru
         Foreach ($choice in $bingChoice){$runningList += $choice}
 
         # Extra New Line for Readability

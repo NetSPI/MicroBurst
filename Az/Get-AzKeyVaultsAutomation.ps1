@@ -74,7 +74,7 @@ Function Get-AzKeyVaultsAutomation
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzKeyVaultsAutomation -Subscription $sub -ExportCerts $ExportCerts -CertificatePassword $CertificatePassword}
         break
     }
@@ -91,7 +91,7 @@ Function Get-AzKeyVaultsAutomation
     
     # Get a list of Automation Accounts
     Write-Verbose "Getting List of Azure Automation Accounts..."
-    $AutoAccounts = Get-AzAutomationAccount | out-gridview -Title "Select One or More Automation Accounts" -PassThru    
+    $AutoAccounts = Get-AzAutomationAccount | Select-MBItem -Title "Select One or More Automation Accounts" -PassThru    
     foreach ($AutoAccount in $AutoAccounts){
         # Set name of Automation Account
         $verboseName = $AutoAccount.AutomationAccountName

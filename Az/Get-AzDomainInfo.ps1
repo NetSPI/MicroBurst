@@ -142,7 +142,7 @@ Function Get-AzDomainInfo
 
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
 
         if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
 

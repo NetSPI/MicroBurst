@@ -86,7 +86,7 @@ Function Get-AzAutomationConnectionScope{
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzAutomationConnectionScope -Subscription $sub -All $All}
         break
     }
@@ -99,7 +99,7 @@ Function Get-AzAutomationConnectionScope{
         $autoAccounts = Get-AzAutomationAccount
     }
     else{
-        $autoAccounts = Get-AzAutomationAccount | out-gridview -Title "Select One or More Automation Accounts" -PassThru
+        $autoAccounts = Get-AzAutomationAccount | Select-MBItem -Title "Select One or More Automation Accounts" -PassThru
     }
     
     $tempOutputObject = New-Object System.Data.DataTable 
