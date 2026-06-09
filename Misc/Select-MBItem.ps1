@@ -1,6 +1,6 @@
 <#
     File: Select-MBItem.ps1
-    Author: MicroBurst
+    Author: 0x0ff537 - Claude Code
     Description: Cross-platform interactive selection helper used as a drop-in
                  replacement for "Out-GridView -PassThru".
 

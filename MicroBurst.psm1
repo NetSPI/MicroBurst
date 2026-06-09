@@ -5,7 +5,7 @@ $global:WarningPreference = 'SilentlyContinue'
 
 # Shared cross-platform helper (Out-GridView replacement). Load first so every
 # imported function can call Select-MBItem.
-Import-Module $PSScriptRoot\Select-MBItem.ps1
+Import-Module $PSScriptRoot\Misc\Select-MBItem.ps1
 
 # Az
 try{
