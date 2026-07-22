@@ -62,7 +62,7 @@ function Invoke-AzVMCommandREST{
         $subscriptions = ((Invoke-WebRequest -Uri ('https://management.azure.com/subscriptions?api-version=2019-11-01') -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).content | ConvertFrom-Json).value
 
         # Select which subscriptions to dump info for
-        $subChoice = $subscriptions | out-gridview -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
 
         if($subChoice.count -eq 0){Write-Verbose 'No subscriptions selected, exiting'; break}
 
@@ -75,7 +75,7 @@ function Invoke-AzVMCommandREST{
         # Get a list of VMs
         $virtualMachines = ((Invoke-WebRequest -Uri (-join ('https://management.azure.com/subscriptions/',$SubscriptionId,"/providers/Microsoft.Compute/virtualMachines?api-version=2020-06-01")) -Verbose:$false -Method GET -Headers @{ Authorization ="Bearer $managementToken"} -UseBasicParsing).Content) | ConvertFrom-Json
     
-        $targetVMs = $virtualMachines.value | out-gridview -Title "Select target VM" -PassThru
+        $targetVMs = $virtualMachines.value | Select-MBItem -Title "Select target VM" -PassThru
 
         # Iterate the VMs and run the command
         foreach($vmObject in $targetVMs){

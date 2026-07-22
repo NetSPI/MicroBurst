@@ -144,7 +144,7 @@ function Get-AzLoadTestingData{
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzLoadTestingData -Subscription $sub -folder $folder -SaveTestFile $SaveTestFile -Type $Type}
         return
     }

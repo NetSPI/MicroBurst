@@ -81,7 +81,7 @@ Function Invoke-AzUADeploymentScript
     else{
         # List subscriptions, pipe out to gridview selection
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Invoke-AzUADeploymentScript -Subscription $sub -TokenScope $TokenScope -Command $Command -ResourceGroup $ResourceGroup -DeploymentSubscriptionID $DeploymentSubscriptionID}
         return
     }
@@ -168,7 +168,7 @@ Function Invoke-AzUADeploymentScript
 
 
     # Select a UA-MI to use
-    $roleChoice =  $TempTblRolesSorted | Out-GridView -Title "Select One or More Identities/Roles to run commands as" -PassThru
+    $roleChoice =  $TempTblRolesSorted | Select-MBItem -Title "Select One or More Identities/Roles to run commands as" -PassThru
 
     foreach($role in $roleChoice){
 

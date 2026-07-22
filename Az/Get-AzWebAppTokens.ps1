@@ -76,7 +76,7 @@ function Get-AzWebAppTokens {
         # List subscriptions, pipe out to gridview selection
         Write-Verbose "Logged In as $accountName"
         $Subscriptions = Get-AzSubscription -WarningAction SilentlyContinue
-        $subChoice = $Subscriptions | Out-GridView -Title "Select One or More Subscriptions" -PassThru
+        $subChoice = $Subscriptions | Select-MBItem -Title "Select One or More Subscriptions" -PassThru
         foreach ($sub in $subChoice) {Get-AzWebAppTokens -Subscription $sub}
         return
     }
@@ -210,7 +210,7 @@ function Get-AzWebAppTokens {
     else{Write-Verbose "`t$($webApps.Count) potentially vulnerable applications identified"}
 
     # Prompt user to select apps, showing only relevant columns
-    $selection = $webApps | Select-Object Name, ResourceGroup, Location, Kind | Out-GridView -PassThru -Title "Select App Services to target"
+    $selection = $webApps | Select-Object Name, ResourceGroup, Location, Kind | Select-MBItem -PassThru -Title "Select App Services to target"
 
     if (-not $selection) {
         Write-Output "No applications selected."
